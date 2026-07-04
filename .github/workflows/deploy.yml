@@ -1,0 +1,52 @@
+name: Deploy KilatGo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  # ---------- FRONTEND: build React, kirim file statis via FTP ----------
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build cms
+        working-directory: cms
+        run: |
+          npm ci
+          npm run build
+      - name: Deploy ke public_html via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASS }}
+          local-dir: cms/dist/
+          server-dir: public_html/
+
+  # ---------- BACKEND: SSH ke server, pull + install + migrate + restart ----------
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASS }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            set -e
+            # aktifkan virtualenv Node cPanel (path dari "Setup Node.js App" > tombol enter venv)
+            source /home/kilb7536/nodevenv/kilatgo_backend/20/bin/activate
+            cd /home/kilb7536/kilatgo_backend
+            git pull origin main
+            npm ci                 # full deps: butuh typescript & prisma untuk build
+            npx prisma generate
+            npx prisma migrate deploy
+            npx tsc            # build TS -> dist
+            mkdir -p tmp && touch tmp/restart.txt   # restart Passenger/Node app

@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+yarn.lock
+pnpm-lock.yaml
+# package-lock.json sengaja di-commit: dibutuhkan `npm ci` saat deploy
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test coverage
+coverage/
+
+# Uploads (if any)
+uploads/
+tmp/
+
+# Tooling / skills lokal (bukan bagian app)
+.agents/
+.codex/
+.kimchi/
+agent/
+skills-lock.json

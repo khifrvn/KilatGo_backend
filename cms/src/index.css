@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+@theme {
+  /* KilatGo Brand Colors */
+  --color-kilatgo-950: #0a1f4d;
+  --color-kilatgo-900: #0e2a66;
+  --color-kilatgo-800: #123580;
+  --color-kilatgo-700: #1742a2;
+  --color-kilatgo-600: #1e52c8;
+  --color-kilatgo-500: #2563eb;
+  --color-kilatgo-400: #4f85f6;
+  --color-kilatgo-300: #84aefb;
+  --color-kilatgo-200: #b9d4fe;
+  --color-kilatgo-100: #e0ecff;
+  --color-kilatgo-50: #f0f6ff;
+
+  --color-kilatgo-accent: #facc15;
+  --color-kilatgo-accent-dark: #eab308;
+  --color-kilatgo-accent-light: #fef08a;
+
+  /* Semantic tokens */
+  --color-primary: var(--color-kilatgo-600);
+  --color-primary-dark: var(--color-kilatgo-800);
+  --color-primary-light: var(--color-kilatgo-50);
+  --color-accent: var(--color-kilatgo-accent);
+  --color-accent-dark: var(--color-kilatgo-accent-dark);
+
+  --font-sans: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Poppins', system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100vh;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-kilatgo-50);
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography refinements — in @layer base so text-* utilities can override */
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    color: var(--color-kilatgo-950);
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--color-kilatgo-400);
+  outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+  background-color: var(--color-kilatgo-200);
+  color: var(--color-kilatgo-950);
+}

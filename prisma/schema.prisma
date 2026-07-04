@@ -1,0 +1,215 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  DRIVER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING
+}
+
+enum DriverStatus {
+  OFFLINE
+  ONLINE
+  BUSY
+}
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  DRIVER_ARRIVED
+  ON_RIDE
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  EWALLET
+  BANK_TRANSFER
+  CARD
+}
+
+model User {
+  id        String     @id @default(uuid())
+  email     String     @unique
+  password  String
+  phone     String     @unique
+  name      String
+  role      UserRole
+  status    UserStatus @default(PENDING)
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  customer      Customer?
+  driver        Driver?
+  admin         Admin?
+  notifications Notification[] @relation("UserNotifications")
+
+  @@map("users")
+}
+
+model Customer {
+  id         String   @id @default(uuid())
+  userId     String   @unique @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating     Float    @default(5.0)
+  totalRides Int      @default(0) @map("total_rides")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  orders Order[]
+
+  @@map("customers")
+}
+
+model Driver {
+  id              String       @id @default(uuid())
+  userId          String       @unique @map("user_id")
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  vehicleType    String        @map("vehicle_type")
+  vehiclePlate   String        @map("vehicle_plate")
+  licenseNumber  String        @map("license_number")
+
+  status         DriverStatus  @default(OFFLINE)
+  latitude       Float?
+  longitude      Float?
+  lastLocationAt DateTime?     @map("last_location_at")
+
+  rating     Float   @default(5.0)
+  totalRides Int     @default(0) @map("total_rides")
+  isApproved Boolean @default(false) @map("is_approved")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  orders          Order[]
+  trackingHistory Tracking[]
+
+  @@map("drivers")
+}
+
+model Admin {
+  id        String   @id @default(uuid())
+  userId    String   @unique @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("admins")
+}
+
+model Order {
+  id              String        @id @default(uuid())
+  orderNumber     String        @unique @default(uuid()) @map("order_number")
+
+  customerId      String        @map("customer_id")
+  customer        Customer      @relation(fields: [customerId], references: [id])
+
+  driverId        String?       @map("driver_id")
+  driver          Driver?       @relation(fields: [driverId], references: [id])
+
+  pickupLat       Float         @map("pickup_lat")
+  pickupLng       Float         @map("pickup_lng")
+  pickupAddress   String        @map("pickup_address") @db.Text
+
+  dropoffLat      Float         @map("dropoff_lat")
+  dropoffLng      Float         @map("dropoff_lng")
+  dropoffAddress  String        @map("dropoff_address") @db.Text
+
+  status          OrderStatus   @default(PENDING)
+
+  distanceKm      Float         @map("distance_km")
+  baseFare        Decimal       @map("base_fare") @db.Decimal(10, 2)
+  totalFare       Decimal       @map("total_fare") @db.Decimal(10, 2)
+
+  paymentMethod   PaymentMethod @default(CASH) @map("payment_method")
+
+  notes           String?       @db.Text
+
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  completedAt     DateTime?     @map("completed_at")
+  cancelledAt     DateTime?     @map("cancelled_at")
+  cancellationReason String?    @map("cancellation_reason") @db.Text
+
+  payment      Payment?
+  trackingLogs Tracking[]
+
+  @@index([customerId])
+  @@index([driverId])
+  @@index([status])
+  @@map("orders")
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  orderId       String        @unique @map("order_id")
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  amount        Decimal       @db.Decimal(10, 2)
+  method        PaymentMethod
+  status        PaymentStatus @default(PENDING)
+
+  transactionId String?       @map("transaction_id")
+  paidAt        DateTime?     @map("paid_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("payments")
+}
+
+model Tracking {
+  id        String   @id @default(uuid())
+  orderId   String?  @map("order_id")
+  order     Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  driverId  String   @map("driver_id")
+  driver    Driver   @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  latitude  Float
+  longitude Float
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([orderId])
+  @@index([driverId])
+  @@map("tracking")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, name: "UserNotifications")
+
+  title     String
+  body      String   @db.Text
+  type      String
+  isRead    Boolean  @default(false) @map("is_read")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("notifications")
+}
