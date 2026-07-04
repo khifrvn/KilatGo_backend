@@ -1,8 +1,8 @@
 ---
 # Backend deploy — jalan saat klik "Deploy HEAD Commit" di cPanel Git Version Control.
-# cwd = folder repo (= Application root Node.js App). DATABASE_URL dibaca dari .env di folder ini.
+# cwd = /home/kilb7536/repositories/Kilatgo_backend (= Application root Node.js App).
+# DATABASE_URL dibaca dari .env di folder ini.
 deployment:
   tasks:
-    # Satu baris = satu shell, biar `source` nodevenv nempel ke perintah berikutnya.
-    # GANTI path venv di bawah kalau versi Node bukan 20 (lihat perintah "enter venv" di Setup Node.js App).
-    - source /home/kilb7536/nodevenv/kilatgo_backend/20/bin/activate && npm ci && npx prisma generate && npx prisma migrate deploy && npx tsc && mkdir -p tmp && touch tmp/restart.txt
+    # Satu baris = satu shell, biar `source` nodevenv nempel. `*` = auto-cocok versi Node.
+    - source /home/kilb7536/nodevenv/repositories/Kilatgo_backend/*/bin/activate && npm ci && npx prisma generate && npx prisma migrate deploy && npx tsc && mkdir -p tmp && touch tmp/restart.txt
