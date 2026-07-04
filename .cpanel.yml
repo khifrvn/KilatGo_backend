@@ -1,15 +1,8 @@
 ---
+# Backend deploy — jalan saat klik "Deploy HEAD Commit" di cPanel Git Version Control.
+# cwd = folder repo (= Application root Node.js App). DATABASE_URL dibaca dari .env di folder ini.
 deployment:
   tasks:
-    # ---- FRONTEND (cms): copy hasil build statis ke docroot ----
-    # cms/dist HARUS sudah ke-build (di lokal / GitHub Actions) dan ikut ke-commit.
-    - export DOCROOT=/home/kilb7536/public_html
-    - /bin/rm -rf $DOCROOT/*
-    - /bin/cp -R cms/dist/* $DOCROOT/
-
-    # ---- BACKEND (Node): sync source ke folder app Node ----
-    - export APP=/home/kilb7536/kilatgo_backend
-    - /bin/mkdir -p $APP
-    - /bin/cp -R dist prisma package.json package-lock.json $APP/
-    # restart Passenger/Node app (dibuat otomatis oleh Setup Node.js App)
-    - /bin/mkdir -p $APP/tmp && /bin/touch $APP/tmp/restart.txt
+    # Satu baris = satu shell, biar `source` nodevenv nempel ke perintah berikutnya.
+    # GANTI path venv di bawah kalau versi Node bukan 20 (lihat perintah "enter venv" di Setup Node.js App).
+    - source /home/kilb7536/nodevenv/kilatgo_backend/20/bin/activate && npm ci && npx prisma generate && npx prisma migrate deploy && npx tsc && mkdir -p tmp && touch tmp/restart.txt

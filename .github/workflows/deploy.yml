@@ -1,12 +1,13 @@
-name: Deploy KilatGo
+name: Deploy Frontend (cms)
 
 on:
   push:
     branches: [main]
+    paths: ['cms/**']          # cuma jalan kalau frontend berubah
   workflow_dispatch: {}
 
+# Backend TIDAK di sini — di-deploy lewat cPanel Git (.cpanel.yml), karena SSH diblok.
 jobs:
-  # ---------- FRONTEND: build React, kirim file statis via FTP ----------
   frontend:
     runs-on: ubuntu-latest
     steps:
@@ -27,26 +28,3 @@ jobs:
           password: ${{ secrets.FTP_PASS }}
           local-dir: cms/dist/
           server-dir: public_html/
-
-  # ---------- BACKEND: SSH ke server, pull + install + migrate + restart ----------
-  backend:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            set -e
-            # aktifkan virtualenv Node cPanel (path dari "Setup Node.js App" > tombol enter venv)
-            source /home/kilb7536/nodevenv/kilatgo_backend/20/bin/activate
-            cd /home/kilb7536/kilatgo_backend
-            git pull origin main
-            npm ci                 # full deps: butuh typescript & prisma untuk build
-            npx prisma generate
-            npx prisma migrate deploy
-            npx tsc            # build TS -> dist
-            mkdir -p tmp && touch tmp/restart.txt   # restart Passenger/Node app
