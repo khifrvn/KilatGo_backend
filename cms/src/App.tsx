@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import UsersPage from './pages/UsersPage';
 import DriversPage from './pages/DriversPage';
+import ApprovalPage from './pages/ApprovalPage';
 import OrdersPage from './pages/OrdersPage';
 import EarningsPage from './pages/EarningsPage';
 
@@ -32,6 +33,7 @@ function App() {
             <Route index element={<DashboardPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="drivers" element={<DriversPage />} />
+            <Route path="approval" element={<ApprovalPage />} />
             <Route path="orders" element={<OrdersPage />} />
             <Route path="earnings" element={<EarningsPage />} />
           </Route>

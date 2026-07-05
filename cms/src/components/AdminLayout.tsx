@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   Users,
   Car,
+  ShieldCheck,
   ClipboardList,
   DollarSign,
   LogOut,
@@ -17,6 +18,7 @@ const navItems = [
   { path: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/admin/users', label: 'Users', icon: Users },
   { path: '/admin/drivers', label: 'Drivers', icon: Car },
+  { path: '/admin/approval', label: 'Approval', icon: ShieldCheck },
   { path: '/admin/orders', label: 'Orders', icon: ClipboardList },
   { path: '/admin/earnings', label: 'Earnings', icon: DollarSign },
 ];
