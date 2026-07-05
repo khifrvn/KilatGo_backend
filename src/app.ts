@@ -13,6 +13,8 @@ import trackingRoutes from './routes/tracking.routes';
 import paymentRoutes from './routes/payment.routes';
 import notificationRoutes from './routes/notification.routes';
 import adminRoutes from './routes/admin.routes';
+import merchantRoutes from './routes/merchant.routes';
+import attendanceRoutes from './routes/attendance.routes';
 
 const app = express();
 
@@ -33,6 +35,8 @@ app.use('/api/tracking', trackingRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/merchants', merchantRoutes);
+app.use('/api/attendance', attendanceRoutes);
 
 // 404 handler
 app.use((_req, res) => {

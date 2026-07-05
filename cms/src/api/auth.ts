@@ -18,3 +18,10 @@ export async function registerDriver(form: FormData): Promise<LoginResponse> {
   });
   return response.data.data!;
 }
+
+export async function registerMerchant(form: FormData): Promise<LoginResponse> {
+  const response = await apiClient.post<ApiResponse<LoginResponse>>('/merchants/register', form, {
+    headers: { 'Content-Type': undefined },
+  });
+  return response.data.data!;
+}

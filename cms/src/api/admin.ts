@@ -6,7 +6,27 @@ import type {
   EarningsReport,
   Order,
   User,
+  Merchant,
+  Attendance,
 } from '../types';
+
+export async function getPendingMerchants(): Promise<Merchant[]> {
+  const r = await apiClient.get<ApiResponse<Merchant[]>>('/admin/merchants/pending');
+  return r.data.data || [];
+}
+
+export async function approveMerchant(id: string, isApproved: boolean): Promise<void> {
+  await apiClient.post(`/admin/merchants/${id}/approve`, { isApproved });
+}
+
+export async function getAttendance(date?: string): Promise<Attendance[]> {
+  const r = await apiClient.get<ApiResponse<Attendance[]>>('/admin/attendance', { params: date ? { date } : undefined });
+  return r.data.data || [];
+}
+
+export async function verifyKyc(subjectType: 'driver' | 'merchant', subjectId: string, approve: boolean, notes?: string): Promise<void> {
+  await apiClient.post(`/admin/kyc/${subjectType}/${subjectId}/verify`, { approve, notes });
+}
 
 export async function getDashboardStats(): Promise<DashboardStats> {
   const response = await apiClient.get<ApiResponse<DashboardStats>>('/admin/dashboard');

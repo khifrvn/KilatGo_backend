@@ -1,9 +1,45 @@
 import { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs';
+import { KycSubject } from '@prisma/client';
 import * as adminService from '../services/admin.service';
+import * as merchantService from '../services/merchant.service';
+import * as attendanceService from '../services/attendance.service';
+import * as kycService from '../services/kyc.service';
 import { successResponse, errorResponse } from '../utils/response';
 import { UPLOAD_DIR } from '../config/upload';
+
+// ===== Fase 2: Merchant approval =====
+export async function getPendingMerchants(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    successResponse(res, 'Pending merchants', await merchantService.listPendingMerchants());
+  } catch (e) { next(e); }
+}
+export async function getMerchant(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    successResponse(res, 'Merchant detail', await merchantService.getMerchant(req.params.id));
+  } catch (e) { next(e); }
+}
+export async function approveMerchant(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const approve = req.body?.isApproved !== false;
+    successResponse(res, approve ? 'Merchant approved' : 'Merchant rejected', await merchantService.approveMerchant(req.params.id, approve));
+  } catch (e) { next(e); }
+}
+
+// ===== Fase 3: Absen & KYC =====
+export async function getAttendance(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    successResponse(res, 'Log absen', await attendanceService.listAllAttendance({ date: req.query.date as string | undefined }));
+  } catch (e) { next(e); }
+}
+export async function verifyKyc(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const subjectType = String(req.params.subjectType).toUpperCase() === 'MERCHANT' ? KycSubject.MERCHANT : KycSubject.DRIVER;
+    const record = await kycService.verify(subjectType, req.params.subjectId, { approve: req.body?.approve !== false, ...req.body });
+    successResponse(res, 'KYC updated', record);
+  } catch (e) { next(e); }
+}
 
 // Serve dokumen KYC privat (admin-only via admin.routes). Token boleh via ?token= untuk <img>.
 export function getDriverDocument(req: Request, res: Response): void {

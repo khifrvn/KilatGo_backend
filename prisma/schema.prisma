@@ -11,6 +11,17 @@ enum UserRole {
   CUSTOMER
   DRIVER
   ADMIN
+  MERCHANT
+}
+
+enum KycSubject {
+  DRIVER
+  MERCHANT
+}
+
+enum AttendanceStatus {
+  PRESENT
+  FLAGGED
 }
 
 enum UserStatus {
@@ -75,6 +86,7 @@ model User {
   customer      Customer?
   driver        Driver?
   admin         Admin?
+  merchant      Merchant?
   notifications Notification[] @relation("UserNotifications")
 
   @@map("users")
@@ -148,8 +160,107 @@ model Driver {
 
   orders          Order[]
   trackingHistory Tracking[]
+  attendances     Attendance[]
 
   @@map("drivers")
+}
+
+// ===== Fase 2: Mitra Usaha (GoFood) =====
+model Merchant {
+  id     String @id @default(uuid())
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  businessName String  @map("business_name")
+  category     String?
+  ownerName    String  @map("owner_name")
+  nik          String?
+  phone        String?
+  address      String? @db.Text
+  city         String?
+  latitude     Float?
+  longitude    Float?
+  operatingHours String? @map("operating_hours")
+
+  // Legalitas & rekening
+  npwp        String?
+  nib         String? // badan usaha
+  siup        String? // badan usaha
+  bankName    String? @map("bank_name")
+  bankAccount String? @map("bank_account")
+  bankHolder  String? @map("bank_holder")
+
+  // Dokumen (path privat) & KYC
+  ktpPhoto    String?   @map("ktp_photo")
+  outletPhoto String?   @map("outlet_photo")
+  npwpPhoto   String?   @map("npwp_photo")
+  kycStatus   KycStatus @default(UNVERIFIED) @map("kyc_status")
+  isApproved  Boolean   @default(false) @map("is_approved")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  menus MerchantMenu[]
+
+  @@map("merchants")
+}
+
+model MerchantMenu {
+  id         String   @id @default(uuid())
+  merchantId String   @map("merchant_id")
+  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  name        String
+  price       Decimal @db.Decimal(10, 2)
+  description String? @db.Text
+  category    String?
+  photo       String?
+  isAvailable Boolean @default(true) @map("is_available")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([merchantId])
+  @@map("merchant_menus")
+}
+
+// ===== Fase 3: KYC & Absen =====
+model KycVerification {
+  id          String     @id @default(uuid())
+  subjectType KycSubject @map("subject_type")
+  subjectId   String     @map("subject_id") // driver.id atau merchant.id
+
+  ocrName        String? @map("ocr_name")
+  ocrNik         String? @map("ocr_nik")
+  faceMatchScore Float?  @map("face_match_score")
+  livenessPassed Boolean? @map("liveness_passed")
+  status         KycStatus @default(PENDING)
+  provider       String?  // vendor e-KYC (nanti), null = manual
+  notes          String?  @db.Text
+  verifiedAt     DateTime? @map("verified_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([subjectType, subjectId])
+  @@map("kyc_verifications")
+}
+
+model Attendance {
+  id       String @id @default(uuid())
+  driverId String @map("driver_id")
+  driver   Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  latitude    Float
+  longitude   Float
+  selfiePhoto String?          @map("selfie_photo")
+  matchScore  Float?           @map("match_score") // hasil face-match vs selfie KYC (vendor, nanti)
+  status      AttendanceStatus @default(PRESENT)
+
+  checkedAt DateTime @default(now()) @map("checked_at")
+
+  @@index([driverId])
+  @@map("attendances")
 }
 
 model Admin {

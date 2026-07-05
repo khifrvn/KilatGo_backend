@@ -17,6 +17,56 @@ export interface User {
   updatedAt: string;
 }
 
+export interface MerchantMenu {
+  id: string;
+  name: string;
+  price: number | string;
+  description?: string | null;
+  category?: string | null;
+  photo?: string | null;
+  isAvailable: boolean;
+}
+
+export interface Merchant {
+  id: string;
+  userId: string;
+  businessName: string;
+  category?: string | null;
+  ownerName: string;
+  nik?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  city?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  operatingHours?: string | null;
+  npwp?: string | null;
+  nib?: string | null;
+  siup?: string | null;
+  bankName?: string | null;
+  bankAccount?: string | null;
+  bankHolder?: string | null;
+  ktpPhoto?: string | null;
+  outletPhoto?: string | null;
+  npwpPhoto?: string | null;
+  kycStatus?: 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
+  isApproved: boolean;
+  user: User;
+  menus?: MerchantMenu[];
+}
+
+export interface Attendance {
+  id: string;
+  driverId: string;
+  latitude: number;
+  longitude: number;
+  selfiePhoto?: string | null;
+  matchScore?: number | null;
+  status: 'PRESENT' | 'FLAGGED';
+  checkedAt: string;
+  driver?: { user: { name: string; email: string; phone: string } };
+}
+
 export interface Driver {
   id: string;
   userId: string;

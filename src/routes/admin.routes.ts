@@ -13,6 +13,15 @@ router.get('/orders', adminController.getAllOrders);
 router.get('/earnings', adminController.getEarningsReport);
 router.get('/drivers/pending', adminController.getPendingDrivers);
 router.get('/files/:name', adminController.getDriverDocument);
+
+// Fase 2: merchant approval
+router.get('/merchants/pending', adminController.getPendingMerchants);
+router.get('/merchants/:id', adminController.getMerchant);
+router.post('/merchants/:id/approve', adminController.approveMerchant);
+
+// Fase 3: absen & KYC
+router.get('/attendance', adminController.getAttendance);
+router.post('/kyc/:subjectType/:subjectId/verify', adminController.verifyKyc);
 router.post('/users/:id/suspend', adminController.suspendUser);
 router.post('/users/:id/activate', adminController.activateUser);
 

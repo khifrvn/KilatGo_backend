@@ -4,6 +4,8 @@ import AdminLayout from './components/AdminLayout';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterDriverPage from './pages/RegisterDriverPage';
+import RegisterMerchantPage from './pages/RegisterMerchantPage';
+import AttendancePage from './pages/AttendancePage';
 import DashboardPage from './pages/DashboardPage';
 import UsersPage from './pages/UsersPage';
 import DriversPage from './pages/DriversPage';
@@ -24,6 +26,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/daftar-driver" element={<RegisterDriverPage />} />
+          <Route path="/daftar-merchant" element={<RegisterMerchantPage />} />
           <Route
             path="/admin/*"
             element={
@@ -36,6 +39,7 @@ function App() {
             <Route path="users" element={<UsersPage />} />
             <Route path="drivers" element={<DriversPage />} />
             <Route path="approval" element={<ApprovalPage />} />
+            <Route path="attendance" element={<AttendancePage />} />
             <Route path="orders" element={<OrdersPage />} />
             <Route path="earnings" element={<EarningsPage />} />
           </Route>

@@ -24,15 +24,23 @@ const imageOnly = (_req: any, file: Express.Multer.File, cb: multer.FileFilterCa
   else cb(new Error('Only JPG/PNG/WEBP images are allowed'));
 };
 
+const base = multer({ storage, fileFilter: imageOnly, limits: { fileSize: 5 * 1024 * 1024 } });
+
 // 5MB per file. Field dokumen driver.
-export const driverDocsUpload = multer({
-  storage,
-  fileFilter: imageOnly,
-  limits: { fileSize: 5 * 1024 * 1024 },
-}).fields([
+export const driverDocsUpload = base.fields([
   { name: 'ktpPhoto', maxCount: 1 },
   { name: 'selfiePhoto', maxCount: 1 },
   { name: 'simPhoto', maxCount: 1 },
   { name: 'stnkPhoto', maxCount: 1 },
   { name: 'skckPhoto', maxCount: 1 },
 ]);
+
+// Dokumen merchant (GoFood)
+export const merchantDocsUpload = base.fields([
+  { name: 'ktpPhoto', maxCount: 1 },
+  { name: 'outletPhoto', maxCount: 1 },
+  { name: 'npwpPhoto', maxCount: 1 },
+]);
+
+// Satu foto: absen selfie / menu
+export const singlePhotoUpload = base.single('photo');

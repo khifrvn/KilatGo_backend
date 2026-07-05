@@ -59,25 +59,19 @@ const faqs = [
 
 export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const [sent, setSent] = useState(false);
   const navigate = useNavigate();
 
   // Driver → lanjut ke form lengkap (prefill). Merchant → Fase 2 (teaser terkirim).
   const handleMitraSubmit = (e: FormEvent) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget as HTMLFormElement);
-    if (fd.get('mitraType') === 'merchant') {
-      setSent(true);
-      return;
-    }
-    navigate('/daftar-driver', {
-      state: {
-        name: fd.get('name'),
-        email: fd.get('email'),
-        phone: fd.get('phone'),
-        city: fd.get('city'),
-      },
-    });
+    const state = {
+      name: fd.get('name'),
+      email: fd.get('email'),
+      phone: fd.get('phone'),
+      city: fd.get('city'),
+    };
+    navigate(fd.get('mitraType') === 'merchant' ? '/daftar-merchant' : '/daftar-driver', { state });
   };
 
   return (
@@ -361,16 +355,7 @@ export default function LandingPage() {
 
           {/* Form */}
           <div className="rounded-3xl bg-white/5 border border-white/10 p-6 sm:p-8 backdrop-blur-sm">
-            {sent ? (
-              <div className="text-center py-10">
-                <div className="mx-auto w-14 h-14 rounded-full bg-kilatgo-accent/20 flex items-center justify-center mb-4">
-                  <CheckCircle2 className="w-7 h-7 text-kilatgo-accent" />
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-2">Pendaftaran terkirim!</h3>
-                <p className="text-sm text-kilatgo-300">Terima kasih. Tim KilatGo akan menghubungimu dalam 1×24 jam.</p>
-              </div>
-            ) : (
-              <form onSubmit={handleMitraSubmit} className="space-y-4">
+            <form onSubmit={handleMitraSubmit} className="space-y-4">
                 <h3 className="text-xl font-semibold text-white mb-1">Formulir Pendaftaran Mitra</h3>
                 <p className="text-sm text-kilatgo-300 mb-4">Isi data di bawah ini dengan lengkap.</p>
                 <div>
@@ -406,7 +391,6 @@ export default function LandingPage() {
                   Daftar Sekarang
                 </button>
               </form>
-            )}
           </div>
         </div>
       </section>
