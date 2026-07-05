@@ -1,22 +1,11 @@
 import { useEffect, useState } from 'react';
-import { UserCheck, XCircle, MapPin, ShieldCheck, Inbox, Eye, X, Store, BadgeCheck } from 'lucide-react';
-import { getPendingDrivers, approveDriver, getPendingMerchants, approveMerchant, verifyKyc } from '../api/admin';
+import { UserCheck, XCircle, MapPin, ShieldCheck, Inbox, Eye, X, Store } from 'lucide-react';
+import { getPendingDrivers, approveDriver, getPendingMerchants, approveMerchant } from '../api/admin';
 import type { Driver, Merchant } from '../types';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const docUrl = (name?: string | null) =>
   name ? `${API}/admin/files/${name}?token=${localStorage.getItem('kilatgo_token')}` : '';
-
-function KycBadge({ status }: { status?: string }) {
-  const map: Record<string, string> = {
-    VERIFIED: 'bg-emerald-100 text-emerald-700 ring-emerald-200',
-    PENDING: 'bg-amber-100 text-amber-700 ring-amber-200',
-    REJECTED: 'bg-red-100 text-red-700 ring-red-200',
-    UNVERIFIED: 'bg-slate-100 text-slate-600 ring-slate-200',
-  };
-  const s = status || 'UNVERIFIED';
-  return <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ring-1 ${map[s]}`}><BadgeCheck className="w-3 h-3" />KYC: {s}</span>;
-}
 
 function Row({ label, value }: { label: string; value?: string | number | null }) {
   return (
@@ -38,8 +27,8 @@ function DocThumb({ label, name }: { label: string; name?: string | null }) {
   );
 }
 
-function ModalShell({ title, subtitle, kyc, onClose, onVerifyKyc, children, footer }: {
-  title: string; subtitle: string; kyc?: string; onClose: () => void; onVerifyKyc?: () => void;
+function ModalShell({ title, subtitle, onClose, children, footer }: {
+  title: string; subtitle: string; onClose: () => void;
   children: React.ReactNode; footer: React.ReactNode;
 }) {
   return (
@@ -50,18 +39,10 @@ function ModalShell({ title, subtitle, kyc, onClose, onVerifyKyc, children, foot
             <h2 className="text-lg font-bold text-kilatgo-950">{title}</h2>
             <p className="text-sm text-slate-500">{subtitle}</p>
           </div>
-          <div className="flex items-center gap-3">
-            <KycBadge status={kyc} />
-            <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100"><X className="w-5 h-5 text-slate-500" /></button>
-          </div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100"><X className="w-5 h-5 text-slate-500" /></button>
         </div>
         <div className="p-6 space-y-6">{children}</div>
         <div className="flex flex-wrap gap-3 px-6 py-4 border-t border-slate-100 sticky bottom-0 bg-white rounded-b-2xl">
-          {onVerifyKyc && (
-            <button onClick={onVerifyKyc} className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-kilatgo-700 bg-kilatgo-50 hover:bg-kilatgo-100 transition">
-              <BadgeCheck className="w-4 h-4" /> Verifikasi KYC
-            </button>
-          )}
           {footer}
         </div>
       </div>
@@ -100,11 +81,6 @@ export default function ApprovalPage() {
     try { setBusy(id); await approveMerchant(id, approve); setMerchants((p) => p.filter((x) => x.id !== id)); setSelMerchant(null); }
     catch (e: any) { setError(e.response?.data?.message || 'Gagal'); } finally { setBusy(null); }
   };
-  const doKyc = async (type: 'driver' | 'merchant', id: string) => {
-    try { setBusy(id); await verifyKyc(type, id, true); alert('KYC ditandai terverifikasi.'); load(); }
-    catch (e: any) { setError(e.response?.data?.message || 'Gagal verifikasi KYC'); } finally { setBusy(null); }
-  };
-
   const list = tab === 'driver' ? drivers : merchants;
   const btn = 'inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-lg transition disabled:opacity-50';
 
@@ -197,8 +173,8 @@ export default function ApprovalPage() {
       </div>
 
       {selDriver && (
-        <ModalShell title={selDriver.user.name} subtitle="Detail pendaftaran driver" kyc={selDriver.kycStatus}
-          onClose={() => setSelDriver(null)} onVerifyKyc={() => doKyc('driver', selDriver.id)}
+        <ModalShell title={selDriver.user.name} subtitle="Detail pendaftaran driver"
+          onClose={() => setSelDriver(null)}
           footer={<>
             <button onClick={() => doDriver(selDriver.id, true)} disabled={busy === selDriver.id} className="flex-1 inline-flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"><UserCheck className="w-4 h-4" />Approve</button>
             <button onClick={() => doDriver(selDriver.id, false)} disabled={busy === selDriver.id} className="flex-1 inline-flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-red-700 bg-red-50 hover:bg-red-100 disabled:opacity-50"><XCircle className="w-4 h-4" />Reject</button>
@@ -236,8 +212,8 @@ export default function ApprovalPage() {
       )}
 
       {selMerchant && (
-        <ModalShell title={selMerchant.businessName} subtitle="Detail pendaftaran mitra usaha" kyc={selMerchant.kycStatus}
-          onClose={() => setSelMerchant(null)} onVerifyKyc={() => doKyc('merchant', selMerchant.id)}
+        <ModalShell title={selMerchant.businessName} subtitle="Detail pendaftaran mitra usaha"
+          onClose={() => setSelMerchant(null)}
           footer={<>
             <button onClick={() => doMerchant(selMerchant.id, true)} disabled={busy === selMerchant.id} className="flex-1 inline-flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"><UserCheck className="w-4 h-4" />Approve</button>
             <button onClick={() => doMerchant(selMerchant.id, false)} disabled={busy === selMerchant.id} className="flex-1 inline-flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-red-700 bg-red-50 hover:bg-red-100 disabled:opacity-50"><XCircle className="w-4 h-4" />Reject</button>

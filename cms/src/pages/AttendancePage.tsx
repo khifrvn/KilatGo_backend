@@ -32,7 +32,7 @@ export default function AttendancePage() {
         <div>
           <p className="text-sm font-medium text-kilatgo-500 uppercase tracking-wider mb-1">Operasional</p>
           <h1 className="text-3xl font-bold text-kilatgo-950">Absensi Driver</h1>
-          <p className="text-sm text-slate-500 mt-1">Check-in driver (selfie + lokasi). Skor face-match terisi saat KYC vendor aktif.</p>
+          <p className="text-sm text-slate-500 mt-1">Check-in driver (selfie + lokasi). Skor = kecocokan wajah vs wajah terdaftar (PRESENT ≥ ambang, FLAGGED bila tidak cocok).</p>
         </div>
         <div className="flex items-end gap-2">
           <div>
