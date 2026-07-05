@@ -28,6 +28,10 @@ router.get('/settings', adminController.getSettings);
 router.put('/settings', adminController.updateSettings);
 router.get('/complaints', adminController.getComplaints);
 router.patch('/complaints/:id', adminController.updateComplaint);
+
+// Log error
+router.get('/errors', adminController.getErrors);
+router.delete('/errors', adminController.clearErrors);
 router.post('/users/:id/suspend', adminController.suspendUser);
 router.post('/users/:id/activate', adminController.activateUser);
 

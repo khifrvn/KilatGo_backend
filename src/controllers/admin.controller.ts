@@ -8,8 +8,17 @@ import * as attendanceService from '../services/attendance.service';
 import * as kycService from '../services/kyc.service';
 import * as settingsService from '../services/settings.service';
 import * as complaintService from '../services/complaint.service';
+import * as errorLogService from '../services/errorlog.service';
 import { successResponse, errorResponse } from '../utils/response';
 import { UPLOAD_DIR } from '../config/upload';
+
+// ===== Log error =====
+export async function getErrors(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try { successResponse(res, 'Error logs', await errorLogService.listErrors({ level: req.query.level as string | undefined })); } catch (e) { next(e); }
+}
+export async function clearErrors(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  try { successResponse(res, 'Error logs cleared', await errorLogService.clearErrors()); } catch (e) { next(e); }
+}
 
 // ===== Pengaturan =====
 export async function getSettings(_req: Request, res: Response, next: NextFunction): Promise<void> {

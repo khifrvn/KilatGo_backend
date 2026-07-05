@@ -9,6 +9,7 @@ import {
   ClipboardList,
   DollarSign,
   Settings,
+  Bug,
   LogOut,
   Menu,
   Zap,
@@ -25,6 +26,7 @@ const navItems = [
   { path: '/admin/orders', label: 'Orders', icon: ClipboardList },
   { path: '/admin/earnings', label: 'Pendapatan', icon: DollarSign },
   { path: '/admin/settings', label: 'Pengaturan', icon: Settings },
+  { path: '/admin/errors', label: 'Log Error', icon: Bug },
 ];
 
 export default function AdminLayout() {

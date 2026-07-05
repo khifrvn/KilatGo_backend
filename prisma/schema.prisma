@@ -407,3 +407,19 @@ model Notification {
   @@index([userId])
   @@map("notifications")
 }
+
+// ===== Log error (API & client) =====
+model ErrorLog {
+  id         String   @id @default(uuid())
+  level      String   @default("ERROR") // ERROR | CLIENT | WARN
+  statusCode Int?     @map("status_code")
+  message    String   @db.Text
+  path       String?
+  method     String?
+  stack      String?  @db.Text
+  userId     String?  @map("user_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("error_logs")
+}

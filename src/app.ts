@@ -16,6 +16,7 @@ import adminRoutes from './routes/admin.routes';
 import merchantRoutes from './routes/merchant.routes';
 import attendanceRoutes from './routes/attendance.routes';
 import complaintRoutes from './routes/complaint.routes';
+import errorRoutes from './routes/error.routes';
 
 const app = express();
 
@@ -39,6 +40,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/merchants', merchantRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/complaints', complaintRoutes);
+app.use('/api/errors', errorRoutes);
 
 // 404 handler
 app.use((_req, res) => {

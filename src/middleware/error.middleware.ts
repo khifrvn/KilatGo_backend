@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { errorResponse } from '../utils/response';
 import { ZodError } from 'zod';
 import { MulterError } from 'multer';
+import { logError } from '../services/errorlog.service';
 
 export class AppError extends Error {
   statusCode: number;
@@ -13,13 +14,25 @@ export class AppError extends Error {
   }
 }
 
+function record(err: Error, req: Request, statusCode: number) {
+  logError({
+    statusCode,
+    message: err.message || err.name,
+    path: (req as any).originalUrl || req.url,
+    method: req.method,
+    stack: err.stack,
+    userId: (req as any).user?.userId,
+  });
+}
+
 export function errorHandler(
   err: Error,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction
 ): Response {
   if (err instanceof AppError) {
+    if (err.statusCode >= 500) record(err, req, err.statusCode);
     return errorResponse(res, err.message, err.statusCode);
   }
 
@@ -45,5 +58,6 @@ export function errorHandler(
   }
 
   console.error('Unhandled error:', err);
+  record(err, req, 500);
   return errorResponse(res, 'Internal server error', 500);
 }

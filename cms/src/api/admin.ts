@@ -57,6 +57,25 @@ export async function updateComplaint(id: string, data: { status?: string; admin
   await apiClient.patch(`/admin/complaints/${id}`, data);
 }
 
+export interface ErrorLog {
+  id: string;
+  level: string;
+  statusCode?: number | null;
+  message: string;
+  path?: string | null;
+  method?: string | null;
+  stack?: string | null;
+  userId?: string | null;
+  createdAt: string;
+}
+export async function getErrors(level?: string): Promise<ErrorLog[]> {
+  const r = await apiClient.get<ApiResponse<ErrorLog[]>>('/admin/errors', { params: level ? { level } : undefined });
+  return r.data.data || [];
+}
+export async function clearErrors(): Promise<void> {
+  await apiClient.delete('/admin/errors');
+}
+
 export async function getDashboardStats(): Promise<DashboardStats> {
   const response = await apiClient.get<ApiResponse<DashboardStats>>('/admin/dashboard');
   return response.data.data!;
