@@ -11,8 +11,26 @@ export async function checkIn(req: Request, res: Response, next: NextFunction): 
       return;
     }
     const selfiePhoto = (req.file as Express.Multer.File | undefined)?.filename;
-    const record = await attendanceService.checkIn(req.user!.userId, { latitude: lat, longitude: lng, selfiePhoto });
+    const record = await attendanceService.checkIn(req.user!.userId, {
+      latitude: lat,
+      longitude: lng,
+      selfiePhoto,
+      faceDescriptor: req.body.faceDescriptor,
+    });
     successResponse(res, 'Absen tercatat', record, 201);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function enrollFace(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.body?.faceDescriptor) {
+      errorResponse(res, 'faceDescriptor wajib', 400);
+      return;
+    }
+    const result = await attendanceService.enrollFace(req.user!.userId, req.body.faceDescriptor);
+    successResponse(res, 'Wajah referensi tersimpan', result);
   } catch (error) {
     next(error);
   }

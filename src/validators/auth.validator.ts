@@ -43,6 +43,9 @@ export const registerDriverSchema = z.object({
   bankAccount: optStr,
   bankHolder: optStr,
   npwp: optStr,
+
+  // Face verification (descriptor JSON dari face-api.js, opsional)
+  faceDescriptor: optStr,
 });
 
 export const loginSchema = z.object({

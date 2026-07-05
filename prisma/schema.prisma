@@ -144,6 +144,7 @@ model Driver {
   simPhoto      String?       @map("sim_photo")
   stnkPhoto     String?       @map("stnk_photo")
   skckPhoto     String?       @map("skck_photo")
+  faceDescriptor String?      @db.Text @map("face_descriptor")
   kycStatus     KycStatus     @default(UNVERIFIED) @map("kyc_status")
 
   status         DriverStatus  @default(OFFLINE)

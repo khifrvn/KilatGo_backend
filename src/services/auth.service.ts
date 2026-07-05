@@ -41,6 +41,7 @@ export interface RegisterDriverInput extends RegisterCustomerInput {
   simPhoto?: string;
   stnkPhoto?: string;
   skckPhoto?: string;
+  faceDescriptor?: string;
 }
 
 export interface LoginInput {
@@ -153,6 +154,7 @@ export async function registerDriver(input: RegisterDriverInput): Promise<AuthRe
           simPhoto: input.simPhoto,
           stnkPhoto: input.stnkPhoto,
           skckPhoto: input.skckPhoto,
+          faceDescriptor: input.faceDescriptor,
         },
       },
     },
