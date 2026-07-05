@@ -23,7 +23,7 @@ const navItems = [
   { path: '/admin/approval', label: 'Approval', icon: ShieldCheck },
   { path: '/admin/attendance', label: 'Absensi', icon: CalendarClock },
   { path: '/admin/orders', label: 'Orders', icon: ClipboardList },
-  { path: '/admin/earnings', label: 'Earnings', icon: DollarSign },
+  { path: '/admin/earnings', label: 'Pendapatan', icon: DollarSign },
   { path: '/admin/settings', label: 'Pengaturan', icon: Settings },
 ];
 
