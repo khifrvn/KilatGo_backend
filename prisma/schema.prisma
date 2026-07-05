@@ -26,6 +26,18 @@ enum DriverStatus {
   BUSY
 }
 
+enum ServiceType {
+  RIDE
+  CAR
+}
+
+enum KycStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
 enum OrderStatus {
   PENDING
   ACCEPTED
@@ -87,9 +99,40 @@ model Driver {
   userId          String       @unique @map("user_id")
   user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // Data diri / KTP
+  nik           String?       @map("nik")
+  birthDate     DateTime?     @map("birth_date")
+  address       String?       @db.Text @map("address")
+  city          String?       @map("city")
+  serviceType   ServiceType   @default(RIDE) @map("service_type")
+
+  // SIM
+  simType       String?       @map("sim_type")
+  simNumber     String?       @map("sim_number")
+  simExpiry     DateTime?     @map("sim_expiry")
+
+  // Kendaraan
   vehicleType    String        @map("vehicle_type")
   vehiclePlate   String        @map("vehicle_plate")
   licenseNumber  String        @map("license_number")
+  vehicleBrand   String?       @map("vehicle_brand")
+  vehicleYear    Int?          @map("vehicle_year")
+  vehicleColor   String?       @map("vehicle_color")
+  stnkNumber     String?       @map("stnk_number")
+
+  // Rekening & pajak
+  bankName      String?       @map("bank_name")
+  bankAccount   String?       @map("bank_account")
+  bankHolder    String?       @map("bank_holder")
+  npwp          String?       @map("npwp")
+
+  // Dokumen (path file privat) & KYC
+  ktpPhoto      String?       @map("ktp_photo")
+  selfiePhoto   String?       @map("selfie_photo")
+  simPhoto      String?       @map("sim_photo")
+  stnkPhoto     String?       @map("stnk_photo")
+  skckPhoto     String?       @map("skck_photo")
+  kycStatus     KycStatus     @default(UNVERIFIED) @map("kyc_status")
 
   status         DriverStatus  @default(OFFLINE)
   latitude       Float?

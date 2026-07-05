@@ -1,6 +1,20 @@
 import { Request, Response, NextFunction } from 'express';
+import path from 'path';
+import fs from 'fs';
 import * as adminService from '../services/admin.service';
-import { successResponse } from '../utils/response';
+import { successResponse, errorResponse } from '../utils/response';
+import { UPLOAD_DIR } from '../config/upload';
+
+// Serve dokumen KYC privat (admin-only via admin.routes). Token boleh via ?token= untuk <img>.
+export function getDriverDocument(req: Request, res: Response): void {
+  const name = path.basename(req.params.name); // cegah path traversal
+  const filePath = path.join(UPLOAD_DIR, name);
+  if (!filePath.startsWith(UPLOAD_DIR) || !fs.existsSync(filePath)) {
+    errorResponse(res, 'File not found', 404);
+    return;
+  }
+  res.sendFile(filePath);
+}
 
 export async function getDashboardStats(
   _req: Request,

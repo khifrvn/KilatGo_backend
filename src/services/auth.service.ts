@@ -15,6 +15,32 @@ export interface RegisterDriverInput extends RegisterCustomerInput {
   vehicleType: string;
   vehiclePlate: string;
   licenseNumber: string;
+  // Data diri
+  nik?: string;
+  birthDate?: string;
+  address?: string;
+  city?: string;
+  serviceType?: 'RIDE' | 'CAR';
+  // SIM
+  simType?: string;
+  simNumber?: string;
+  simExpiry?: string;
+  // Kendaraan
+  vehicleBrand?: string;
+  vehicleYear?: number;
+  vehicleColor?: string;
+  stnkNumber?: string;
+  // Rekening & pajak
+  bankName?: string;
+  bankAccount?: string;
+  bankHolder?: string;
+  npwp?: string;
+  // Dokumen (nama file yang sudah diupload)
+  ktpPhoto?: string;
+  selfiePhoto?: string;
+  simPhoto?: string;
+  stnkPhoto?: string;
+  skckPhoto?: string;
 }
 
 export interface LoginInput {
@@ -106,6 +132,27 @@ export async function registerDriver(input: RegisterDriverInput): Promise<AuthRe
           vehicleType: input.vehicleType,
           vehiclePlate: input.vehiclePlate,
           licenseNumber: input.licenseNumber,
+          nik: input.nik,
+          birthDate: input.birthDate ? new Date(input.birthDate) : undefined,
+          address: input.address,
+          city: input.city,
+          serviceType: input.serviceType ?? 'RIDE',
+          simType: input.simType,
+          simNumber: input.simNumber,
+          simExpiry: input.simExpiry ? new Date(input.simExpiry) : undefined,
+          vehicleBrand: input.vehicleBrand,
+          vehicleYear: input.vehicleYear,
+          vehicleColor: input.vehicleColor,
+          stnkNumber: input.stnkNumber,
+          bankName: input.bankName,
+          bankAccount: input.bankAccount,
+          bankHolder: input.bankHolder,
+          npwp: input.npwp,
+          ktpPhoto: input.ktpPhoto,
+          selfiePhoto: input.selfiePhoto,
+          simPhoto: input.simPhoto,
+          stnkPhoto: input.stnkPhoto,
+          skckPhoto: input.skckPhoto,
         },
       },
     },

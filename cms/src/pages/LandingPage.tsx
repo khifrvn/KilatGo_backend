@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Zap,
   Motorbike,
@@ -60,12 +60,24 @@ const faqs = [
 export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [sent, setSent] = useState(false);
+  const navigate = useNavigate();
 
-  // ponytail: lead form client-side saja. POST ke /api/auth/register/driver
-  // saat alur verifikasi mitra sudah siap.
+  // Driver → lanjut ke form lengkap (prefill). Merchant → Fase 2 (teaser terkirim).
   const handleMitraSubmit = (e: FormEvent) => {
     e.preventDefault();
-    setSent(true);
+    const fd = new FormData(e.currentTarget as HTMLFormElement);
+    if (fd.get('mitraType') === 'merchant') {
+      setSent(true);
+      return;
+    }
+    navigate('/daftar-driver', {
+      state: {
+        name: fd.get('name'),
+        email: fd.get('email'),
+        phone: fd.get('phone'),
+        city: fd.get('city'),
+      },
+    });
   };
 
   return (
@@ -363,26 +375,26 @@ export default function LandingPage() {
                 <p className="text-sm text-kilatgo-300 mb-4">Isi data di bawah ini dengan lengkap.</p>
                 <div>
                   <label className="block text-sm text-kilatgo-200 mb-1.5">Nama lengkap</label>
-                  <input required type="text" placeholder="Nama sesuai KTP" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-white placeholder:text-kilatgo-400 focus:ring-2 focus:ring-kilatgo-accent focus:border-kilatgo-accent outline-none transition" />
+                  <input required name="name" type="text" placeholder="Nama sesuai KTP" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-white placeholder:text-kilatgo-400 focus:ring-2 focus:ring-kilatgo-accent focus:border-kilatgo-accent outline-none transition" />
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm text-kilatgo-200 mb-1.5">Nomor HP</label>
-                    <input required type="tel" placeholder="08xxxxxxxxxx" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-white placeholder:text-kilatgo-400 focus:ring-2 focus:ring-kilatgo-accent focus:border-kilatgo-accent outline-none transition" />
+                    <input required name="phone" type="tel" placeholder="08xxxxxxxxxx" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-white placeholder:text-kilatgo-400 focus:ring-2 focus:ring-kilatgo-accent focus:border-kilatgo-accent outline-none transition" />
                   </div>
                   <div>
                     <label className="block text-sm text-kilatgo-200 mb-1.5">Email</label>
-                    <input required type="email" placeholder="nama@email.com" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-white placeholder:text-kilatgo-400 focus:ring-2 focus:ring-kilatgo-accent focus:border-kilatgo-accent outline-none transition" />
+                    <input required name="email" type="email" placeholder="nama@email.com" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-white placeholder:text-kilatgo-400 focus:ring-2 focus:ring-kilatgo-accent focus:border-kilatgo-accent outline-none transition" />
                   </div>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm text-kilatgo-200 mb-1.5">Kota</label>
-                    <input required type="text" placeholder="Kota domisili" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-white placeholder:text-kilatgo-400 focus:ring-2 focus:ring-kilatgo-accent focus:border-kilatgo-accent outline-none transition" />
+                    <input required name="city" type="text" placeholder="Kota domisili" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-white placeholder:text-kilatgo-400 focus:ring-2 focus:ring-kilatgo-accent focus:border-kilatgo-accent outline-none transition" />
                   </div>
                   <div>
                     <label className="block text-sm text-kilatgo-200 mb-1.5">Jenis mitra</label>
-                    <select required defaultValue="" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-white focus:ring-2 focus:ring-kilatgo-accent focus:border-kilatgo-accent outline-none transition">
+                    <select required name="mitraType" defaultValue="" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-white focus:ring-2 focus:ring-kilatgo-accent focus:border-kilatgo-accent outline-none transition">
                       <option value="" disabled className="text-slate-900">Pilih jenis mitra</option>
                       <option value="driver" className="text-slate-900">Driver</option>
                       <option value="merchant" className="text-slate-900">Merchant</option>

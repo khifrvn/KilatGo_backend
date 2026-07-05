@@ -21,7 +21,16 @@ export async function registerDriver(
   next: NextFunction
 ): Promise<void> {
   try {
-    const result = await authService.registerDriver(req.body);
+    const files = (req.files as Record<string, Express.Multer.File[]>) || {};
+    const fileName = (field: string) => files[field]?.[0]?.filename;
+    const result = await authService.registerDriver({
+      ...req.body,
+      ktpPhoto: fileName('ktpPhoto'),
+      selfiePhoto: fileName('selfiePhoto'),
+      simPhoto: fileName('simPhoto'),
+      stnkPhoto: fileName('stnkPhoto'),
+      skckPhoto: fileName('skckPhoto'),
+    });
     successResponse(res, 'Driver registered successfully. Awaiting admin approval.', result, 201);
   } catch (error) {
     next(error);

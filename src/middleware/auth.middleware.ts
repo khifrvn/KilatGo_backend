@@ -9,7 +9,8 @@ export function authenticateToken(
   next: NextFunction
 ): void {
   const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.split(' ')[1];
+  // token via header (default) atau query ?token= (untuk <img> dokumen KYC)
+  const token = (authHeader && authHeader.split(' ')[1]) || (req.query.token as string | undefined);
 
   if (!token) {
     errorResponse(res, 'Access token required', 401);

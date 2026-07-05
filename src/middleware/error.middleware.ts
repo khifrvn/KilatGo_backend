@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { errorResponse } from '../utils/response';
 import { ZodError } from 'zod';
+import { MulterError } from 'multer';
 
 export class AppError extends Error {
   statusCode: number;
@@ -24,6 +25,15 @@ export function errorHandler(
 
   if (err instanceof ZodError) {
     return errorResponse(res, 'Validation failed', 400, err.errors);
+  }
+
+  if (err instanceof MulterError) {
+    const msg = err.code === 'LIMIT_FILE_SIZE' ? 'File terlalu besar (maks 5MB)' : `Upload error: ${err.message}`;
+    return errorResponse(res, msg, 400);
+  }
+
+  if (err.message?.startsWith('Only ')) {
+    return errorResponse(res, err.message, 400);
   }
 
   if (err.name === 'JsonWebTokenError') {

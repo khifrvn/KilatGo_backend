@@ -28,6 +28,29 @@ export interface Driver {
   totalRides: number;
   isApproved: boolean;
   user: User;
+  // Data lengkap pendaftaran (Fase 1)
+  nik?: string | null;
+  birthDate?: string | null;
+  address?: string | null;
+  city?: string | null;
+  serviceType?: 'RIDE' | 'CAR';
+  simType?: string | null;
+  simNumber?: string | null;
+  simExpiry?: string | null;
+  vehicleBrand?: string | null;
+  vehicleYear?: number | null;
+  vehicleColor?: string | null;
+  stnkNumber?: string | null;
+  bankName?: string | null;
+  bankAccount?: string | null;
+  bankHolder?: string | null;
+  npwp?: string | null;
+  ktpPhoto?: string | null;
+  selfiePhoto?: string | null;
+  simPhoto?: string | null;
+  stnkPhoto?: string | null;
+  skckPhoto?: string | null;
+  kycStatus?: 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
 }
 
 export interface Customer {

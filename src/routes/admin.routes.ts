@@ -12,6 +12,7 @@ router.get('/dashboard', adminController.getDashboardStats);
 router.get('/orders', adminController.getAllOrders);
 router.get('/earnings', adminController.getEarningsReport);
 router.get('/drivers/pending', adminController.getPendingDrivers);
+router.get('/files/:name', adminController.getDriverDocument);
 router.post('/users/:id/suspend', adminController.suspendUser);
 router.post('/users/:id/activate', adminController.activateUser);
 
