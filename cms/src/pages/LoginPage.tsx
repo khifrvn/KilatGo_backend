@@ -7,7 +7,7 @@ import { AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('admin@kilatgo.com');
-  const [password, setPassword] = useState('admin123');
+  const [password, setPassword] = useState('KilatGo!Admin2026');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login: authLogin } = useAuth();
@@ -125,12 +125,6 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-
-          <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-            <p className="text-xs text-slate-400">
-              Default credentials: admin@kilatgo.com / admin123
-            </p>
-          </div>
         </div>
       </div>
     </div>
