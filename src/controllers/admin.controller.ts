@@ -6,8 +6,26 @@ import * as adminService from '../services/admin.service';
 import * as merchantService from '../services/merchant.service';
 import * as attendanceService from '../services/attendance.service';
 import * as kycService from '../services/kyc.service';
+import * as settingsService from '../services/settings.service';
+import * as complaintService from '../services/complaint.service';
 import { successResponse, errorResponse } from '../utils/response';
 import { UPLOAD_DIR } from '../config/upload';
+
+// ===== Pengaturan =====
+export async function getSettings(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  try { successResponse(res, 'Settings', await settingsService.getSettings()); } catch (e) { next(e); }
+}
+export async function updateSettings(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try { successResponse(res, 'Settings updated', await settingsService.updateSettings(req.body || {})); } catch (e) { next(e); }
+}
+
+// ===== Kendala / complaints =====
+export async function getComplaints(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try { successResponse(res, 'Complaints', await complaintService.listComplaints(req.query.status as string | undefined)); } catch (e) { next(e); }
+}
+export async function updateComplaint(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try { successResponse(res, 'Complaint updated', await complaintService.updateComplaint(req.params.id, req.body || {})); } catch (e) { next(e); }
+}
 
 // ===== Fase 2: Merchant approval =====
 export async function getPendingMerchants(_req: Request, res: Response, next: NextFunction): Promise<void> {

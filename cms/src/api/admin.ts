@@ -28,6 +28,35 @@ export async function verifyKyc(subjectType: 'driver' | 'merchant', subjectId: s
   await apiClient.post(`/admin/kyc/${subjectType}/${subjectId}/verify`, { approve, notes });
 }
 
+export async function getSettings(): Promise<Record<string, string>> {
+  const r = await apiClient.get<ApiResponse<Record<string, string>>>('/admin/settings');
+  return r.data.data || {};
+}
+export async function updateSettings(patch: Record<string, string>): Promise<Record<string, string>> {
+  const r = await apiClient.put<ApiResponse<Record<string, string>>>('/admin/settings', patch);
+  return r.data.data || {};
+}
+
+export interface Complaint {
+  id: string;
+  fromRole: 'DRIVER' | 'MERCHANT';
+  fromName?: string | null;
+  category?: string | null;
+  subject: string;
+  message: string;
+  status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED';
+  adminNote?: string | null;
+  createdAt: string;
+  resolvedAt?: string | null;
+}
+export async function getComplaints(status?: string): Promise<Complaint[]> {
+  const r = await apiClient.get<ApiResponse<Complaint[]>>('/admin/complaints', { params: status ? { status } : undefined });
+  return r.data.data || [];
+}
+export async function updateComplaint(id: string, data: { status?: string; adminNote?: string }): Promise<void> {
+  await apiClient.patch(`/admin/complaints/${id}`, data);
+}
+
 export async function getDashboardStats(): Promise<DashboardStats> {
   const response = await apiClient.get<ApiResponse<DashboardStats>>('/admin/dashboard');
   return response.data.data!;

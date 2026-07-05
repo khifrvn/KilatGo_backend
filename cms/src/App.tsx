@@ -7,6 +7,7 @@ import RegisterDriverPage from './pages/RegisterDriverPage';
 import RegisterMerchantPage from './pages/RegisterMerchantPage';
 import AttendancePage from './pages/AttendancePage';
 import MerchantPortalPage from './pages/MerchantPortalPage';
+import SettingsPage from './pages/SettingsPage';
 import DashboardPage from './pages/DashboardPage';
 import UsersPage from './pages/UsersPage';
 import DriversPage from './pages/DriversPage';
@@ -44,6 +45,7 @@ function App() {
             <Route path="attendance" element={<AttendancePage />} />
             <Route path="orders" element={<OrdersPage />} />
             <Route path="earnings" element={<EarningsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

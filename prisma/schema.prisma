@@ -24,6 +24,17 @@ enum AttendanceStatus {
   FLAGGED
 }
 
+enum ComplaintStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum ComplaintFrom {
+  DRIVER
+  MERCHANT
+}
+
 enum UserStatus {
   ACTIVE
   INACTIVE
@@ -262,6 +273,34 @@ model Attendance {
 
   @@index([driverId])
   @@map("attendances")
+}
+
+// ===== Pengaturan (key-value: komisi, tarif, dll) =====
+model Setting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+// ===== Kendala / keluhan driver & mitra =====
+model Complaint {
+  id         String          @id @default(uuid())
+  fromRole   ComplaintFrom   @map("from_role")
+  fromUserId String          @map("from_user_id")
+  fromName   String?         @map("from_name")
+  category   String?
+  subject    String
+  message    String          @db.Text
+  status     ComplaintStatus @default(OPEN)
+  adminNote  String?         @db.Text @map("admin_note")
+
+  createdAt  DateTime  @default(now()) @map("created_at")
+  resolvedAt DateTime? @map("resolved_at")
+
+  @@index([status])
+  @@map("complaints")
 }
 
 model Admin {

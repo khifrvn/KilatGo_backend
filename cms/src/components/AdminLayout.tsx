@@ -8,6 +8,7 @@ import {
   CalendarClock,
   ClipboardList,
   DollarSign,
+  Settings,
   LogOut,
   Menu,
   Zap,
@@ -23,6 +24,7 @@ const navItems = [
   { path: '/admin/attendance', label: 'Absensi', icon: CalendarClock },
   { path: '/admin/orders', label: 'Orders', icon: ClipboardList },
   { path: '/admin/earnings', label: 'Earnings', icon: DollarSign },
+  { path: '/admin/settings', label: 'Pengaturan', icon: Settings },
 ];
 
 export default function AdminLayout() {

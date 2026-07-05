@@ -22,6 +22,12 @@ router.post('/merchants/:id/approve', adminController.approveMerchant);
 // Fase 3: absen & KYC
 router.get('/attendance', adminController.getAttendance);
 router.post('/kyc/:subjectType/:subjectId/verify', adminController.verifyKyc);
+
+// Pengaturan (komisi/tarif) & kendala
+router.get('/settings', adminController.getSettings);
+router.put('/settings', adminController.updateSettings);
+router.get('/complaints', adminController.getComplaints);
+router.patch('/complaints/:id', adminController.updateComplaint);
 router.post('/users/:id/suspend', adminController.suspendUser);
 router.post('/users/:id/activate', adminController.activateUser);
 
