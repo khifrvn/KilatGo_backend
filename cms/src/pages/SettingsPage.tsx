@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Percent, MessageSquareWarning, Save, Loader2, Inbox, CheckCircle2 } from 'lucide-react';
+import { Percent, MessageSquareWarning, Save, Loader2, Inbox, CheckCircle2, Phone } from 'lucide-react';
 import { getSettings, updateSettings, getComplaints, updateComplaint, type Complaint } from '../api/admin';
 
 const COMMISSION_FIELDS: { key: string; label: string; suffix: string; hint?: string }[] = [
@@ -10,11 +10,67 @@ const COMMISSION_FIELDS: { key: string; label: string; suffix: string; hint?: st
   { key: 'min_fare', label: 'Tarif minimum', suffix: 'Rp' },
 ];
 
+const KONTAK_FIELDS: { key: string; label: string; placeholder: string }[] = [
+  { key: 'contact_email', label: 'Email', placeholder: 'costumerservice@kilatgo.com' },
+  { key: 'contact_phone', label: 'Telepon', placeholder: '08xxxxxxxxxx' },
+  { key: 'contact_whatsapp', label: 'WhatsApp', placeholder: '08xxxxxxxxxx' },
+  { key: 'contact_address', label: 'Alamat', placeholder: 'Alamat lengkap' },
+];
+
 const statusColor: Record<string, string> = {
   OPEN: 'bg-amber-100 text-amber-700 ring-amber-200',
   IN_PROGRESS: 'bg-blue-100 text-blue-700 ring-blue-200',
   RESOLVED: 'bg-emerald-100 text-emerald-700 ring-emerald-200',
 };
+
+function KontakTab() {
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  useEffect(() => { getSettings().then((s) => { setValues(s); setLoading(false); }).catch(() => setLoading(false)); }, []);
+
+  const save = async () => {
+    try {
+      setSaving(true); setMsg('');
+      const patch: Record<string, string> = {};
+      KONTAK_FIELDS.forEach((f) => { patch[f.key] = values[f.key] ?? ''; });
+      setValues(await updateSettings(patch)); setMsg('Tersimpan ✓');
+    } catch { setMsg('Gagal menyimpan'); } finally { setSaving(false); }
+  };
+
+  if (loading) return <div className="flex justify-center py-16"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-kilatgo-500" /></div>;
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 max-w-2xl">
+      <h3 className="font-bold text-kilatgo-950 mb-1">Kontak</h3>
+      <p className="text-sm text-slate-500 mb-5">Info ini tampil di bagian "Hubungi kami" pada landing page.</p>
+      <div className="space-y-4">
+        {KONTAK_FIELDS.map((f) => (
+          <div key={f.key}>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">{f.label}</label>
+            {f.key === 'contact_address' ? (
+              <textarea rows={2} value={values[f.key] ?? ''} placeholder={f.placeholder}
+                onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 outline-none focus:ring-2 focus:ring-kilatgo-400 resize-none" />
+            ) : (
+              <input value={values[f.key] ?? ''} placeholder={f.placeholder}
+                onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 outline-none focus:ring-2 focus:ring-kilatgo-400" />
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-3 mt-6">
+        <button onClick={save} disabled={saving} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white bg-kilatgo-600 hover:bg-kilatgo-700 transition disabled:opacity-60">
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}Simpan
+        </button>
+        {msg && <span className="text-sm text-slate-500">{msg}</span>}
+      </div>
+    </div>
+  );
+}
 
 function KomisiTab() {
   const [values, setValues] = useState<Record<string, string>>({});
@@ -125,7 +181,7 @@ function KendalaTab() {
 }
 
 export default function SettingsPage() {
-  const [tab, setTab] = useState<'komisi' | 'kendala'>('komisi');
+  const [tab, setTab] = useState<'komisi' | 'kontak' | 'kendala'>('komisi');
   return (
     <div className="space-y-6">
       <div>
@@ -134,9 +190,10 @@ export default function SettingsPage() {
       </div>
       <div className="flex gap-2">
         <button onClick={() => setTab('komisi')} className={`px-4 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center gap-2 transition ${tab === 'komisi' ? 'bg-kilatgo-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}><Percent className="w-4 h-4" />Komisi & Tarif</button>
+        <button onClick={() => setTab('kontak')} className={`px-4 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center gap-2 transition ${tab === 'kontak' ? 'bg-kilatgo-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}><Phone className="w-4 h-4" />Kontak</button>
         <button onClick={() => setTab('kendala')} className={`px-4 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center gap-2 transition ${tab === 'kendala' ? 'bg-kilatgo-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}><MessageSquareWarning className="w-4 h-4" />Kendala Driver & Mitra</button>
       </div>
-      {tab === 'komisi' ? <KomisiTab /> : <KendalaTab />}
+      {tab === 'komisi' ? <KomisiTab /> : tab === 'kontak' ? <KontakTab /> : <KendalaTab />}
     </div>
   );
 }

@@ -7,13 +7,28 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   per_km: '2500', // tarif per km (Rp)
   min_fare: '8000', // tarif minimum (Rp)
   food_commission_percent: '20', // komisi KilatFood (%)
+  // Kontak (tampil di landing)
+  contact_email: 'costumerservice@kilatgo.com',
+  contact_phone: '0895418213962',
+  contact_whatsapp: '0895418213962',
+  contact_address: 'Dusun 3 Rejo Sari, Kwala Begumit, Kec. Stabat, Kab. Langkat, Sumatera Utara',
 };
+
+// Key yang boleh diakses publik (landing) — jangan bocorkan setting internal lain.
+const PUBLIC_KEYS = ['contact_email', 'contact_phone', 'contact_whatsapp', 'contact_address'];
 
 export async function getSettings(): Promise<Record<string, string>> {
   const rows = await prisma.setting.findMany();
   const stored: Record<string, string> = {};
   for (const r of rows) stored[r.key] = r.value;
   return { ...DEFAULT_SETTINGS, ...stored };
+}
+
+export async function getPublicSettings(): Promise<Record<string, string>> {
+  const all = await getSettings();
+  const out: Record<string, string> = {};
+  for (const k of PUBLIC_KEYS) out[k] = all[k];
+  return out;
 }
 
 export async function updateSettings(patch: Record<string, unknown>): Promise<Record<string, string>> {

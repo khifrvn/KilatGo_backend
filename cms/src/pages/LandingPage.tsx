@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { getPublicSettings } from '../api/admin';
 import {
   Zap,
   Motorbike,
@@ -60,6 +61,24 @@ const faqs = [
 export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const navigate = useNavigate();
+
+  // Kontak dari Pengaturan (dengan fallback default).
+  const [contact, setContact] = useState({
+    contact_email: 'costumerservice@kilatgo.com',
+    contact_phone: '0895418213962',
+    contact_whatsapp: '0895418213962',
+    contact_address: 'Dusun 3 Rejo Sari, Kwala Begumit, Kec. Stabat, Kab. Langkat, Sumatera Utara',
+  });
+  useEffect(() => {
+    getPublicSettings().then((s) => setContact((c) => ({ ...c, ...s }))).catch(() => {});
+  }, []);
+  const intl = (p: string) => '62' + (p || '').replace(/[^0-9]/g, '').replace(/^0/, '');
+  const contactCards = [
+    { icon: Mail, label: 'Email', value: contact.contact_email, href: `mailto:${contact.contact_email}` },
+    { icon: Phone, label: 'Telepon', value: contact.contact_phone, href: `tel:+${intl(contact.contact_phone)}` },
+    { icon: MessageCircle, label: 'WhatsApp', value: contact.contact_whatsapp, href: `https://wa.me/${intl(contact.contact_whatsapp)}` },
+    { icon: MapPin, label: 'Alamat', value: contact.contact_address, href: `https://maps.google.com/?q=${encodeURIComponent(contact.contact_address)}` },
+  ];
 
   // Driver → lanjut ke form lengkap (prefill). Merchant → Fase 2 (teaser terkirim).
   const handleMitraSubmit = (e: FormEvent) => {
@@ -404,12 +423,7 @@ export default function LandingPage() {
             <p className="text-slate-500">Tim dukungan KilatGo siap membantu setiap hari.</p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {[
-              { icon: Mail, label: 'Email', value: 'costumerservice@kilatgo.com', href: 'mailto:costumerservice@kilatgo.com' },
-              { icon: Phone, label: 'Telepon', value: '0895418213962', href: 'tel:+62895418213962' },
-              { icon: MessageCircle, label: 'WhatsApp', value: '0895418213962', href: 'https://wa.me/62895418213962' },
-              { icon: MapPin, label: 'Alamat', value: 'Dusun 3 Rejo Sari, Kwala Begumit, Kec. Stabat, Kab. Langkat, Sumatera Utara', href: 'https://maps.google.com/?q=Kwala+Begumit+Stabat+Langkat+Sumatera+Utara' },
-            ].map((c) => (
+            {contactCards.map((c) => (
               <a
                 key={c.label}
                 href={c.href}

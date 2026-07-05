@@ -37,6 +37,12 @@ export async function updateSettings(patch: Record<string, string>): Promise<Rec
   return r.data.data || {};
 }
 
+// Publik (landing) — info kontak, tanpa auth.
+export async function getPublicSettings(): Promise<Record<string, string>> {
+  const r = await apiClient.get<ApiResponse<Record<string, string>>>('/settings/public');
+  return r.data.data || {};
+}
+
 export interface Complaint {
   id: string;
   fromRole: 'DRIVER' | 'MERCHANT';
