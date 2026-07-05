@@ -36,11 +36,13 @@ export async function checkIn(driverUserId: string, input: CheckInInput) {
 }
 
 // Enroll / perbarui wajah referensi (mis. dari app mobile saat pertama login)
-export async function enrollFace(driverUserId: string, faceDescriptor: string) {
+export async function enrollFace(driverUserId: string, faceDescriptor: unknown) {
   const driver = await prisma.driver.findUnique({ where: { userId: driverUserId } });
   if (!driver) throw new AppError('Driver profile not found', 404);
-  if (!parseDescriptor(faceDescriptor)) throw new AppError('faceDescriptor tidak valid', 400);
-  await prisma.driver.update({ where: { id: driver.id }, data: { faceDescriptor } });
+  const parsed = parseDescriptor(faceDescriptor as any);
+  if (!parsed) throw new AppError('faceDescriptor tidak valid', 400);
+  // selalu simpan sebagai string (field DB Text) — terima array (JSON body) atau string (form)
+  await prisma.driver.update({ where: { id: driver.id }, data: { faceDescriptor: JSON.stringify(parsed) } });
   return { enrolled: true };
 }
 
