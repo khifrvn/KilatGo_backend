@@ -11,7 +11,7 @@ export interface User {
   email: string;
   name: string;
   phone: string;
-  role: 'CUSTOMER' | 'DRIVER' | 'ADMIN';
+  role: 'CUSTOMER' | 'DRIVER' | 'ADMIN' | 'MERCHANT';
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PENDING';
   createdAt: string;
   updatedAt: string;

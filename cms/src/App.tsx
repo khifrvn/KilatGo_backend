@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterDriverPage from './pages/RegisterDriverPage';
 import RegisterMerchantPage from './pages/RegisterMerchantPage';
 import AttendancePage from './pages/AttendancePage';
+import MerchantPortalPage from './pages/MerchantPortalPage';
 import DashboardPage from './pages/DashboardPage';
 import UsersPage from './pages/UsersPage';
 import DriversPage from './pages/DriversPage';
@@ -27,6 +28,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/daftar-driver" element={<RegisterDriverPage />} />
           <Route path="/daftar-merchant" element={<RegisterMerchantPage />} />
+          <Route path="/merchant" element={<ProtectedRoute><MerchantPortalPage /></ProtectedRoute>} />
           <Route
             path="/admin/*"
             element={

@@ -21,7 +21,7 @@ export default function LoginPage() {
     try {
       const response = await login({ email, password });
       authLogin(response.token, response.user);
-      navigate('/admin', { replace: true });
+      navigate(response.user.role === 'MERCHANT' ? '/merchant' : '/admin', { replace: true });
     } catch (err: any) {
       setError(
         err.response?.data?.message || 'Login failed. Please check your credentials.'
