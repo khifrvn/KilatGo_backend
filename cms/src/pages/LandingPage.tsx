@@ -405,10 +405,10 @@ export default function LandingPage() {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
-              { icon: Mail, label: 'Email', value: 'support@kilatgo.com', href: 'mailto:support@kilatgo.com' },
-              { icon: Phone, label: 'Telepon', value: '(021) 1234 5678', href: 'tel:+62211234567' },
-              { icon: MessageCircle, label: 'WhatsApp', value: '0812 3456 7890', href: 'https://wa.me/6281234567890' },
-              { icon: MapPin, label: 'Alamat', value: 'Jl. Sudirman No. 1, Jakarta', href: '#' },
+              { icon: Mail, label: 'Email', value: 'costumerservice@kilatgo.com', href: 'mailto:costumerservice@kilatgo.com' },
+              { icon: Phone, label: 'Telepon', value: '0895418213962', href: 'tel:+62895418213962' },
+              { icon: MessageCircle, label: 'WhatsApp', value: '0895418213962', href: 'https://wa.me/62895418213962' },
+              { icon: MapPin, label: 'Alamat', value: 'Dusun 3 Rejo Sari, Kwala Begumit, Kec. Stabat, Kab. Langkat, Sumatera Utara', href: 'https://maps.google.com/?q=Kwala+Begumit+Stabat+Langkat+Sumatera+Utara' },
             ].map((c) => (
               <a
                 key={c.label}
