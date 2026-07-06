@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { errorHandler } from './middleware/error.middleware';
+import { maintenanceGate } from './middleware/maintenance.middleware';
 
 dotenv.config();
 
@@ -29,6 +30,9 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'kilatgo-backend', timestamp: new Date().toISOString() });
 });
+
+// Blokir request non-admin saat maintenance mode aktif
+app.use(maintenanceGate);
 
 // API routes
 app.use('/api/auth', authRoutes);

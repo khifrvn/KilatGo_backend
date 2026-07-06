@@ -7,6 +7,8 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   per_km: '2500', // tarif per km (Rp)
   min_fare: '8000', // tarif minimum (Rp)
   food_commission_percent: '20', // komisi KilatFood (%)
+  maintenance_mode: '0', // '1' = app dalam perbaikan (blokir request non-admin)
+  maintenance_message: 'Aplikasi sedang dalam perbaikan. Silakan coba lagi nanti.',
   // Kontak (tampil di landing)
   contact_email: 'costumerservice@kilatgo.com',
   contact_phone: '0895418213962',
@@ -15,7 +17,7 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
 };
 
 // Key yang boleh diakses publik (landing) — jangan bocorkan setting internal lain.
-const PUBLIC_KEYS = ['contact_email', 'contact_phone', 'contact_whatsapp', 'contact_address'];
+const PUBLIC_KEYS = ['contact_email', 'contact_phone', 'contact_whatsapp', 'contact_address', 'maintenance_mode', 'maintenance_message'];
 
 export async function getSettings(): Promise<Record<string, string>> {
   const rows = await prisma.setting.findMany();
