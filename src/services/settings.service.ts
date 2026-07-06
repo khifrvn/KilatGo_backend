@@ -7,6 +7,7 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   per_km: '2500', // tarif per km (Rp)
   min_fare: '8000', // tarif minimum (Rp)
   food_commission_percent: '20', // komisi KilatFood (%)
+  withdraw_admin_fee: '2500', // biaya admin per penarikan saldo (Rp)
   maintenance_mode: '0', // '1' = app dalam perbaikan (blokir request non-admin)
   maintenance_message: 'Aplikasi sedang dalam perbaikan. Silakan coba lagi nanti.',
   // Kontak (tampil di landing)

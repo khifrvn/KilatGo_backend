@@ -8,6 +8,7 @@ const COMMISSION_FIELDS: { key: string; label: string; suffix: string; hint?: st
   { key: 'base_fare', label: 'Tarif dasar', suffix: 'Rp' },
   { key: 'per_km', label: 'Tarif per km', suffix: 'Rp' },
   { key: 'min_fare', label: 'Tarif minimum', suffix: 'Rp' },
+  { key: 'withdraw_admin_fee', label: 'Biaya admin penarikan', suffix: 'Rp' },
 ];
 
 const KONTAK_FIELDS: { key: string; label: string; placeholder: string }[] = [
