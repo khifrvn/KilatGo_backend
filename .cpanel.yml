@@ -1,3 +1,3 @@
 deployment:
   tasks:
-    - 'source /home/kilb7536/nodevenv/repositories/Kilatgo_backend/*/bin/activate && npm ci && npx prisma generate && npx prisma migrate deploy && npx tsc && mkdir -p tmp && touch tmp/restart.txt'
+    - 'source /home/kilb7536/nodevenv/repositories/Kilatgo_backend/*/bin/activate && npm ci && npx prisma generate && npx prisma migrate deploy && npx tsc && (cd cms && npm ci && npm run build) && mkdir -p tmp && touch tmp/restart.txt'

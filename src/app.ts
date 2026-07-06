@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 import { errorHandler } from './middleware/error.middleware';
 import { maintenanceGate } from './middleware/maintenance.middleware';
 
@@ -30,6 +31,13 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'kilatgo-backend', timestamp: new Date().toISOString() });
 });
+
+// Admin panel (CMS) — dibuild ke cms/dist saat deploy. __dirname = dist/ setelah tsc.
+const cmsDist = path.join(__dirname, '../cms/dist');
+app.use(express.static(cmsDist));
+// SPA fallback: semua GET non-API kembalikan index.html (react-router). Di ATAS gate
+// supaya panel admin tetap bisa dimuat untuk mematikan maintenance mode.
+app.get(/^\/(?!api\/|api$|health$).*/, (_req, res) => res.sendFile(path.join(cmsDist, 'index.html')));
 
 // Blokir request non-admin saat maintenance mode aktif
 app.use(maintenanceGate);
