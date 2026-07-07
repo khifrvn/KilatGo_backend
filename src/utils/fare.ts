@@ -1,8 +1,12 @@
-export function calculateFare(distanceKm: number): number {
-  const baseFare = 5000; // IDR base fare
-  const perKmRate = 2500; // IDR per km
+// Per-service pricing. CAR is roomier/AC so it costs more than a motorbike RIDE.
+const PRICING = {
+  RIDE: { baseFare: 5000, perKmRate: 2500, minFare: 8000 },
+  CAR: { baseFare: 10000, perKmRate: 4000, minFare: 15000 },
+} as const;
 
-  return Math.round(baseFare + distanceKm * perKmRate);
+export function calculateFare(distanceKm: number, serviceType: 'RIDE' | 'CAR' = 'RIDE'): number {
+  const p = PRICING[serviceType] ?? PRICING.RIDE;
+  return Math.max(p.minFare, Math.round(p.baseFare + distanceKm * p.perKmRate));
 }
 
 export function calculateDistance(

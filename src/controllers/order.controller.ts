@@ -104,7 +104,7 @@ export async function findAvailableOrders(
   next: NextFunction
 ): Promise<void> {
   try {
-    const orders = await orderService.findAvailableOrders();
+    const orders = await orderService.findAvailableOrders(req.user!.userId);
     successResponse(res, 'Available orders retrieved', orders);
   } catch (error) {
     next(error);

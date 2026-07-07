@@ -1,4 +1,4 @@
-import { OrderStatus, UserRole, DriverStatus, PaymentStatus } from '@prisma/client';
+import { OrderStatus, UserRole, DriverStatus, PaymentStatus, ServiceType } from '@prisma/client';
 import { prisma } from '../config/database';
 import { AppError } from '../middleware/error.middleware';
 import { calculateDistance, calculateFare } from '../utils/fare';
@@ -12,6 +12,7 @@ export interface CreateOrderInput {
   dropoffLng: number;
   dropoffAddress: string;
   paymentMethod: any;
+  serviceType?: ServiceType;
   notes?: string;
 }
 
@@ -31,7 +32,8 @@ export async function createOrder(input: CreateOrderInput) {
     input.dropoffLng
   );
 
-  const fare = calculateFare(distanceKm);
+  const serviceType = input.serviceType ?? ServiceType.RIDE;
+  const fare = calculateFare(distanceKm, serviceType);
 
   const order = await prisma.order.create({
     data: {
@@ -43,6 +45,7 @@ export async function createOrder(input: CreateOrderInput) {
       dropoffLng: input.dropoffLng,
       dropoffAddress: input.dropoffAddress,
       distanceKm,
+      serviceType,
       baseFare: fare,
       totalFare: fare,
       paymentMethod: input.paymentMethod,
@@ -300,9 +303,15 @@ export async function listOrders(userId: string, userRole: UserRole, status?: Or
   return orders;
 }
 
-export async function findAvailableOrders() {
+export async function findAvailableOrders(driverUserId: string) {
+  const driver = await prisma.driver.findUnique({ where: { userId: driverUserId } });
+  if (!driver) {
+    throw new AppError('Driver profile not found', 404);
+  }
+
+  // A driver only sees orders matching the service they're registered for.
   const orders = await prisma.order.findMany({
-    where: { status: OrderStatus.PENDING, driverId: null },
+    where: { status: OrderStatus.PENDING, driverId: null, serviceType: driver.serviceType },
     include: {
       customer: {
         include: {

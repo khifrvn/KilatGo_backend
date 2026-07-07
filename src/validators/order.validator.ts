@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { OrderStatus, PaymentMethod } from '@prisma/client';
+import { OrderStatus, PaymentMethod, ServiceType } from '@prisma/client';
 
 export const createOrderSchema = z.object({
   pickupLat: z.number().min(-90).max(90),
@@ -9,6 +9,7 @@ export const createOrderSchema = z.object({
   dropoffLng: z.number().min(-180).max(180),
   dropoffAddress: z.string().min(5),
   paymentMethod: z.nativeEnum(PaymentMethod).default(PaymentMethod.CASH),
+  serviceType: z.nativeEnum(ServiceType).default(ServiceType.RIDE),
   notes: z.string().optional(),
 });
 

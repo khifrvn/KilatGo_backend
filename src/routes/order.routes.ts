@@ -14,11 +14,12 @@ const router = Router();
 // Customer routes
 router.post('/', authenticateToken, authorizeRoles(UserRole.CUSTOMER), validateBody(createOrderSchema), orderController.createOrder);
 router.get('/', authenticateToken, orderController.listOrders);
+
+// Driver routes — /available MUST come before /:id or it gets matched as an id.
+router.get('/available', authenticateToken, authorizeRoles(UserRole.DRIVER), orderController.findAvailableOrders);
+
 router.get('/:id', authenticateToken, orderController.getOrder);
 router.patch('/:id/cancel', authenticateToken, authorizeRoles(UserRole.CUSTOMER, UserRole.DRIVER), validateBody(cancelOrderSchema), orderController.cancelOrder);
-
-// Driver routes
-router.get('/available', authenticateToken, authorizeRoles(UserRole.DRIVER), orderController.findAvailableOrders);
 router.post('/:id/accept', authenticateToken, authorizeRoles(UserRole.DRIVER), orderController.assignDriver);
 router.patch('/:id/status', authenticateToken, authorizeRoles(UserRole.DRIVER), validateBody(updateOrderStatusSchema), orderController.updateStatus);
 

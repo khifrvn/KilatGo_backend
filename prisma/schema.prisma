@@ -332,6 +332,7 @@ model Order {
   dropoffAddress  String        @map("dropoff_address") @db.Text
 
   status          OrderStatus   @default(PENDING)
+  serviceType     ServiceType   @default(RIDE) @map("service_type")
 
   distanceKm      Float         @map("distance_km")
   baseFare        Decimal       @map("base_fare") @db.Decimal(10, 2)
