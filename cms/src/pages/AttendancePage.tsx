@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { CalendarClock, MapPin, Inbox } from 'lucide-react';
 import { getAttendance } from '../api/admin';
 import type { Attendance } from '../types';
+import { onImgError } from '../utils/image';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const docUrl = (name?: string | null) =>
@@ -85,7 +86,7 @@ export default function AttendancePage() {
                     <td className="px-6 py-4">
                       {r.selfiePhoto ? (
                         <a href={docUrl(r.selfiePhoto)} target="_blank" rel="noreferrer">
-                          <img src={docUrl(r.selfiePhoto)} alt="selfie" className="w-12 h-12 object-cover rounded-lg border border-slate-200" />
+                          <img src={docUrl(r.selfiePhoto)} onError={onImgError} alt="selfie" className="w-12 h-12 object-cover rounded-lg border border-slate-200 bg-slate-50" />
                         </a>
                       ) : <span className="text-slate-400 text-sm">—</span>}
                     </td>

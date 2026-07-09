@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Percent, MessageSquareWarning, Save, Loader2, Inbox, CheckCircle2, Phone, Wrench } from 'lucide-react';
+import { Percent, MessageSquareWarning, Save, Loader2, Inbox, CheckCircle2, Phone, Wrench, CreditCard, Eye, EyeOff } from 'lucide-react';
 import { getSettings, updateSettings, getComplaints, updateComplaint, type Complaint } from '../api/admin';
 
 const COMMISSION_FIELDS: { key: string; label: string; suffix: string; hint?: string }[] = [
@@ -173,6 +173,80 @@ function KomisiTab() {
   );
 }
 
+function PembayaranTab() {
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [showKey, setShowKey] = useState(false);
+
+  useEffect(() => { getSettings().then((s) => { setValues(s); setLoading(false); }).catch(() => setLoading(false)); }, []);
+
+  const mode = values.ipaymu_mode === 'production' ? 'production' : 'sandbox';
+  const prefix = mode === 'production' ? 'ipaymu_prod' : 'ipaymu_sandbox';
+  // Field mengikuti mode aktif: pilih Sandbox → VA/API key sandbox, pilih Production → yang production.
+  const fields = [
+    { key: `${prefix}_va`, label: 'Virtual Account (VA)', placeholder: mode === 'production' ? 'VA production' : '0000002273624493' },
+    { key: `${prefix}_api_key`, label: 'API Key', placeholder: mode === 'production' ? 'API key production' : 'SANDBOX...' },
+  ];
+
+  const save = async () => {
+    try {
+      setSaving(true); setMsg('');
+      // Simpan hanya credential mode aktif + mode-nya. Credential mode lain tetap tersimpan (tak tersentuh).
+      const patch: Record<string, string> = { ipaymu_mode: mode };
+      fields.forEach((f) => { patch[f.key] = values[f.key] ?? ''; });
+      setValues(await updateSettings(patch)); setMsg('Tersimpan ✓');
+    } catch { setMsg('Gagal menyimpan'); } finally { setSaving(false); }
+  };
+
+  if (loading) return <div className="flex justify-center py-16"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-kilatgo-500" /></div>;
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 max-w-2xl">
+      <h3 className="font-bold text-kilatgo-950 mb-1">Payment Gateway — iPaymu</h3>
+      <p className="text-sm text-slate-500 mb-5">Credential ini dipakai backend untuk transaksi pembayaran di aplikasi mobile. Sandbox &amp; Production disimpan terpisah — ganti mode otomatis menampilkan VA/API key mode tersebut.</p>
+
+      <label className="block text-sm font-medium text-slate-700 mb-1.5">Mode</label>
+      <div className="flex gap-2 mb-4">
+        {[['sandbox', 'Sandbox'], ['production', 'Production']].map(([v, l]) => (
+          <button key={v} onClick={() => { setValues((s) => ({ ...s, ipaymu_mode: v })); setMsg(''); }}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${mode === v ? 'bg-kilatgo-600 text-white' : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'}`}>{l}</button>
+        ))}
+      </div>
+
+      <div className="space-y-4">
+        {fields.map((f) => {
+          const secret = f.key.endsWith('_api_key');
+          return (
+            <div key={f.key}>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">{f.label}</label>
+              <div className="relative">
+                <input type={secret && !showKey ? 'password' : 'text'} value={values[f.key] ?? ''} placeholder={f.placeholder}
+                  onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
+                  className={`w-full pl-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 outline-none focus:ring-2 focus:ring-kilatgo-400 font-mono text-sm ${secret ? 'pr-11' : 'pr-4'}`} />
+                {secret && (
+                  <button type="button" onClick={() => setShowKey((s) => !s)} tabIndex={-1}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center gap-3 mt-6">
+        <button onClick={save} disabled={saving} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white bg-kilatgo-600 hover:bg-kilatgo-700 transition disabled:opacity-60">
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}Simpan
+        </button>
+        {msg && <span className="text-sm text-slate-500">{msg}</span>}
+      </div>
+    </div>
+  );
+}
+
 function KendalaTab() {
   const [rows, setRows] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -236,7 +310,7 @@ function KendalaTab() {
 }
 
 export default function SettingsPage() {
-  const [tab, setTab] = useState<'komisi' | 'kontak' | 'maintenance' | 'kendala'>('komisi');
+  const [tab, setTab] = useState<'komisi' | 'kontak' | 'pembayaran' | 'maintenance' | 'kendala'>('komisi');
   return (
     <div className="space-y-6">
       <div>
@@ -246,10 +320,11 @@ export default function SettingsPage() {
       <div className="flex gap-2">
         <button onClick={() => setTab('komisi')} className={`px-4 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center gap-2 transition ${tab === 'komisi' ? 'bg-kilatgo-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}><Percent className="w-4 h-4" />Komisi & Tarif</button>
         <button onClick={() => setTab('kontak')} className={`px-4 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center gap-2 transition ${tab === 'kontak' ? 'bg-kilatgo-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}><Phone className="w-4 h-4" />Kontak</button>
+        <button onClick={() => setTab('pembayaran')} className={`px-4 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center gap-2 transition ${tab === 'pembayaran' ? 'bg-kilatgo-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}><CreditCard className="w-4 h-4" />Pembayaran</button>
         <button onClick={() => setTab('maintenance')} className={`px-4 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center gap-2 transition ${tab === 'maintenance' ? 'bg-kilatgo-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}><Wrench className="w-4 h-4" />Mode Perbaikan</button>
         <button onClick={() => setTab('kendala')} className={`px-4 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center gap-2 transition ${tab === 'kendala' ? 'bg-kilatgo-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}><MessageSquareWarning className="w-4 h-4" />Kendala Driver & Mitra</button>
       </div>
-      {tab === 'komisi' ? <KomisiTab /> : tab === 'kontak' ? <KontakTab /> : tab === 'maintenance' ? <MaintenanceTab /> : <KendalaTab />}
+      {tab === 'komisi' ? <KomisiTab /> : tab === 'kontak' ? <KontakTab /> : tab === 'pembayaran' ? <PembayaranTab /> : tab === 'maintenance' ? <MaintenanceTab /> : <KendalaTab />}
     </div>
   );
 }

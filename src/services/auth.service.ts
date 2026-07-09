@@ -1,8 +1,9 @@
 import bcrypt from 'bcryptjs';
 import { UserRole, UserStatus } from '@prisma/client';
 import { prisma } from '../config/database';
-import { generateToken } from '../utils/jwt';
+import { generateTokens, verifyRefreshToken } from '../utils/jwt';
 import { AppError } from '../middleware/error.middleware';
+import { User } from '@prisma/client';
 
 export interface RegisterCustomerInput {
   email: string;
@@ -50,7 +51,10 @@ export interface LoginInput {
 }
 
 export interface AuthResponse {
+  /** @deprecated alias of accessToken, kept for older clients. */
   token: string;
+  accessToken: string;
+  refreshToken: string;
   user: {
     id: string;
     email: string;
@@ -58,6 +62,29 @@ export interface AuthResponse {
     phone: string;
     role: UserRole;
     status: UserStatus;
+  };
+}
+
+/** Build the standard auth envelope (access + refresh + user) for a user row. */
+function buildAuthResponse(user: User): AuthResponse {
+  const { accessToken, refreshToken } = generateTokens({
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+  });
+
+  return {
+    token: accessToken,
+    accessToken,
+    refreshToken,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      phone: user.phone,
+      role: user.role,
+      status: user.status,
+    },
   };
 }
 
@@ -88,23 +115,7 @@ export async function registerCustomer(input: RegisterCustomerInput): Promise<Au
     },
   });
 
-  const token = generateToken({
-    userId: user.id,
-    email: user.email,
-    role: user.role,
-  });
-
-  return {
-    token,
-    user: {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      phone: user.phone,
-      role: user.role,
-      status: user.status,
-    },
-  };
+  return buildAuthResponse(user);
 }
 
 export async function registerDriver(input: RegisterDriverInput): Promise<AuthResponse> {
@@ -160,23 +171,7 @@ export async function registerDriver(input: RegisterDriverInput): Promise<AuthRe
     },
   });
 
-  const token = generateToken({
-    userId: user.id,
-    email: user.email,
-    role: user.role,
-  });
-
-  return {
-    token,
-    user: {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      phone: user.phone,
-      role: user.role,
-      status: user.status,
-    },
-  };
+  return buildAuthResponse(user);
 }
 
 export async function login(input: LoginInput): Promise<AuthResponse> {
@@ -198,21 +193,28 @@ export async function login(input: LoginInput): Promise<AuthResponse> {
     throw new AppError('Invalid email or password', 401);
   }
 
-  const token = generateToken({
-    userId: user.id,
-    email: user.email,
-    role: user.role,
-  });
+  return buildAuthResponse(user);
+}
 
-  return {
-    token,
-    user: {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      phone: user.phone,
-      role: user.role,
-      status: user.status,
-    },
-  };
+/**
+ * Exchange a valid refresh token for a fresh access token (and rotated refresh token).
+ * Stateless: re-reads the user so role/status changes (e.g. driver approved) take effect.
+ */
+export async function refresh(refreshToken: string): Promise<AuthResponse> {
+  let payload;
+  try {
+    payload = verifyRefreshToken(refreshToken);
+  } catch {
+    throw new AppError('Invalid or expired refresh token', 401);
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: payload.userId } });
+  if (!user) {
+    throw new AppError('User no longer exists', 401);
+  }
+  if (user.status === UserStatus.SUSPENDED) {
+    throw new AppError('Account has been suspended', 403);
+  }
+
+  return buildAuthResponse(user);
 }

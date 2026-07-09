@@ -8,11 +8,13 @@ Dokumentasi endpoint backend untuk app **Customer**, **Driver**, dan **Merchant*
 
 ## Autentikasi
 
-Login mengembalikan **JWT** (berlaku 7 hari). Sertakan di setiap request yang butuh login:
+Login/register mengembalikan **access token** (berlaku 1 jam) + **refresh token** (berlaku 30 hari). Sertakan access token di setiap request yang butuh login:
 
 ```
-Authorization: Bearer <token>
+Authorization: Bearer <accessToken>
 ```
+
+Saat access token kadaluarsa (`401`), tukar refresh token via `POST /api/auth/refresh` untuk dapat access token baru — tanpa login ulang (sesi panjang).
 
 Role di token: `CUSTOMER` · `DRIVER` · `MERCHANT` · `ADMIN`.
 
@@ -40,14 +42,19 @@ Kode status: `200` ok · `201` created · `400` validasi · `401` token salah/ka
 | POST | `/api/auth/register/driver` | **multipart** (lihat bawah) | daftar driver |
 | POST | `/api/merchants/register` | **multipart** (lihat bawah) | daftar mitra usaha |
 | POST | `/api/auth/login` | `{ email, password }` | login |
+| POST | `/api/auth/refresh` | `{ refreshToken }` | tukar refresh token → access token baru |
 
 **Response login / register** → `data`:
 ```jsonc
 {
-  "token": "eyJ...",
+  "token": "eyJ...",         // = accessToken (alias, backward-compat)
+  "accessToken": "eyJ...",   // berlaku 1 jam
+  "refreshToken": "eyJ...",  // berlaku 30 hari
   "user": { "id", "email", "name", "phone", "role", "status" }
 }
 ```
+
+**Response `/api/auth/refresh`** → `data`: sama seperti di atas (access + refresh baru).
 
 **Register driver** (`multipart/form-data`) — field:
 `name, email, phone, password, nik(16 digit), birthDate?, address?, city, serviceType(RIDE|CAR),`
@@ -156,8 +163,7 @@ Event **server → client**: `driver:status`, `driver:location:ack`, `order:loca
 1. **Alur GoFood** — customer pesan makanan ke merchant, merchant terima/proses order. Order saat ini hanya **ride/kirim** (customer→driver).
 2. **Customer lapor kendala** — `/api/complaints` sekarang hanya DRIVER/MERCHANT.
 3. **Lupa password / OTP / verifikasi nomor HP.**
-4. **Refresh token** — token 7 hari, tanpa refresh.
-5. **Payment gateway asli** — masih mock (belum Midtrans/Xendit/dll).
-6. **Push notification (FCM/OneSignal)** — notifikasi baru tersimpan di DB, belum dikirim ke perangkat.
+4. **Payment gateway asli** — masih mock (belum Midtrans/Xendit/dll).
+5. **Push notification (FCM/OneSignal)** — notifikasi baru tersimpan di DB, belum dikirim ke perangkat.
 
 > Semua endpoint di atas sudah **live & teruji** di `https://api.kilatgo.com`.

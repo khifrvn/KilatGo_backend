@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { UserCheck, XCircle, MapPin, ShieldCheck, Inbox, Eye, X, Store } from 'lucide-react';
 import { getPendingDrivers, approveDriver, getPendingMerchants, approveMerchant } from '../api/admin';
 import type { Driver, Merchant } from '../types';
+import { onImgError } from '../utils/image';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const docUrl = (name?: string | null) =>
@@ -22,7 +23,7 @@ function DocThumb({ label, name }: { label: string; name?: string | null }) {
   return (
     <a href={url} target="_blank" rel="noreferrer" className="block group">
       <p className="text-xs text-slate-500 mb-1">{label}</p>
-      <img src={url} alt={label} className="w-full h-28 object-cover rounded-lg border border-slate-200 group-hover:ring-2 ring-kilatgo-400 transition" />
+      <img src={url} onError={onImgError} alt={label} className="w-full h-28 object-cover rounded-lg border border-slate-200 bg-slate-50 group-hover:ring-2 ring-kilatgo-400 transition" />
     </a>
   );
 }

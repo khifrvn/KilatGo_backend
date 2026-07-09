@@ -15,6 +15,13 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   contact_phone: '0895418213962',
   contact_whatsapp: '0895418213962',
   contact_address: 'Dusun 3 Rejo Sari, Kwala Begumit, Kec. Stabat, Kab. Langkat, Sumatera Utara',
+  // Payment gateway iPaymu (dipakai backend untuk transaksi mobile). JANGAN masuk PUBLIC_KEYS.
+  // Credential disimpan terpisah per-mode: ganti mode otomatis pakai VA/API key mode itu.
+  ipaymu_mode: 'sandbox', // 'sandbox' | 'production' — menentukan credential & base URL aktif
+  ipaymu_sandbox_va: '', // Virtual Account iPaymu (sandbox)
+  ipaymu_sandbox_api_key: '', // API Key iPaymu (sandbox)
+  ipaymu_prod_va: '', // Virtual Account iPaymu (production)
+  ipaymu_prod_api_key: '', // API Key iPaymu (production)
 };
 
 // Key yang boleh diakses publik (landing) — jangan bocorkan setting internal lain.
@@ -32,6 +39,18 @@ export async function getPublicSettings(): Promise<Record<string, string>> {
   const out: Record<string, string> = {};
   for (const k of PUBLIC_KEYS) out[k] = all[k];
   return out;
+}
+
+// Credential iPaymu aktif sesuai mode. Backend selalu pakai ini, jangan baca key mentah.
+export async function getIpaymuConfig(): Promise<{ va: string; apiKey: string; mode: string; baseUrl: string }> {
+  const s = await getSettings();
+  const prod = s.ipaymu_mode === 'production';
+  return {
+    mode: prod ? 'production' : 'sandbox',
+    va: prod ? s.ipaymu_prod_va : s.ipaymu_sandbox_va,
+    apiKey: prod ? s.ipaymu_prod_api_key : s.ipaymu_sandbox_api_key,
+    baseUrl: prod ? 'https://my.ipaymu.com/api/v2' : 'https://sandbox.ipaymu.com/api/v2',
+  };
 }
 
 export async function updateSettings(patch: Record<string, unknown>): Promise<Record<string, string>> {

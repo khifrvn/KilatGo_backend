@@ -49,3 +49,16 @@ export async function login(
     next(error);
   }
 }
+
+export async function refresh(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const result = await authService.refresh(req.body.refreshToken);
+    successResponse(res, 'Token refreshed', result);
+  } catch (error) {
+    next(error);
+  }
+}

@@ -2,6 +2,7 @@ import { OrderStatus, UserRole, DriverStatus, PaymentStatus, ServiceType } from 
 import { prisma } from '../config/database';
 import { AppError } from '../middleware/error.middleware';
 import { calculateDistance, calculateFare } from '../utils/fare';
+import { computeDiscount, findVoucher } from '../utils/vouchers';
 
 export interface CreateOrderInput {
   customerId: string;
@@ -13,6 +14,7 @@ export interface CreateOrderInput {
   dropoffAddress: string;
   paymentMethod: any;
   serviceType?: ServiceType;
+  voucherCode?: string;
   notes?: string;
 }
 
@@ -35,6 +37,18 @@ export async function createOrder(input: CreateOrderInput) {
   const serviceType = input.serviceType ?? ServiceType.RIDE;
   const fare = calculateFare(distanceKm, serviceType);
 
+  // Apply voucher server-side (authoritative — client discount is only a preview).
+  let discount = 0;
+  let voucherCode: string | null = null;
+  if (input.voucherCode) {
+    const voucher = findVoucher(input.voucherCode);
+    if (voucher && fare >= voucher.minFare && (!voucher.serviceType || voucher.serviceType === serviceType)) {
+      discount = computeDiscount(voucher, fare);
+      voucherCode = voucher.code;
+    }
+  }
+  const totalFare = Math.max(0, fare - discount);
+
   const order = await prisma.order.create({
     data: {
       customerId: customer.id,
@@ -47,7 +61,9 @@ export async function createOrder(input: CreateOrderInput) {
       distanceKm,
       serviceType,
       baseFare: fare,
-      totalFare: fare,
+      discount,
+      voucherCode,
+      totalFare,
       paymentMethod: input.paymentMethod,
       notes: input.notes,
       status: OrderStatus.PENDING,

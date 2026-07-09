@@ -5,6 +5,7 @@ import { getPublicSettings } from '../api/admin';
 import {
   Zap,
   Motorbike,
+  Car,
   Package,
   UtensilsCrossed,
   MapPin,
@@ -18,6 +19,7 @@ import {
   Navigation,
   Plus,
   Minus,
+  ChevronDown,
   Mail,
   Phone,
   MessageCircle,
@@ -26,6 +28,7 @@ import {
 
 const services = [
   { icon: Motorbike, name: 'KilatRide', desc: 'Ojek motor cepat sampai tujuan, tarif transparan.' },
+  { icon: Car, name: 'KilatCar', desc: 'Mobil ber-AC nyaman untuk perjalanan bersama.' },
   { icon: Package, name: 'KilatSend', desc: 'Kirim paket & dokumen instan dalam kota.' },
   { icon: UtensilsCrossed, name: 'KilatFood', desc: 'Pesan makanan favorit, diantar hangat.' },
 ];
@@ -120,12 +123,6 @@ export default function LandingPage() {
             >
               Download Aplikasi
             </a>
-            <Link
-              to="/login"
-              className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white border border-white/15 hover:bg-white/10 transition"
-            >
-              Masuk Admin
-            </Link>
           </div>
         </div>
       </header>
@@ -252,7 +249,7 @@ export default function LandingPage() {
             <h2 className="text-3xl lg:text-4xl font-bold mt-2 mb-4">Semua ada dalam satu aplikasi</h2>
             <p className="text-slate-500">Dari antar-jemput sampai belanja harian, KilatGo siap membantu keseharianmu.</p>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {services.map((s) => (
               <div
                 key={s.name}
@@ -379,30 +376,33 @@ export default function LandingPage() {
                 <p className="text-sm text-kilatgo-300 mb-4">Isi data di bawah ini dengan lengkap.</p>
                 <div>
                   <label className="block text-sm text-kilatgo-200 mb-1.5">Nama lengkap</label>
-                  <input required name="name" type="text" placeholder="Nama sesuai KTP" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-white placeholder:text-kilatgo-400 focus:ring-2 focus:ring-kilatgo-accent focus:border-kilatgo-accent outline-none transition" />
+                  <input required name="name" type="text" placeholder="Nama sesuai KTP" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:ring-2 focus:ring-kilatgo-accent focus:border-kilatgo-accent outline-none transition" />
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm text-kilatgo-200 mb-1.5">Nomor HP</label>
-                    <input required name="phone" type="tel" placeholder="08xxxxxxxxxx" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-white placeholder:text-kilatgo-400 focus:ring-2 focus:ring-kilatgo-accent focus:border-kilatgo-accent outline-none transition" />
+                    <input required name="phone" type="tel" placeholder="08xxxxxxxxxx" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:ring-2 focus:ring-kilatgo-accent focus:border-kilatgo-accent outline-none transition" />
                   </div>
                   <div>
                     <label className="block text-sm text-kilatgo-200 mb-1.5">Email</label>
-                    <input required name="email" type="email" placeholder="nama@email.com" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-white placeholder:text-kilatgo-400 focus:ring-2 focus:ring-kilatgo-accent focus:border-kilatgo-accent outline-none transition" />
+                    <input required name="email" type="email" placeholder="nama@email.com" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:ring-2 focus:ring-kilatgo-accent focus:border-kilatgo-accent outline-none transition" />
                   </div>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm text-kilatgo-200 mb-1.5">Kota</label>
-                    <input required name="city" type="text" placeholder="Kota domisili" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-white placeholder:text-kilatgo-400 focus:ring-2 focus:ring-kilatgo-accent focus:border-kilatgo-accent outline-none transition" />
+                    <input required name="city" type="text" placeholder="Kota domisili" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:ring-2 focus:ring-kilatgo-accent focus:border-kilatgo-accent outline-none transition" />
                   </div>
                   <div>
                     <label className="block text-sm text-kilatgo-200 mb-1.5">Jenis mitra</label>
-                    <select required name="mitraType" defaultValue="" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-white focus:ring-2 focus:ring-kilatgo-accent focus:border-kilatgo-accent outline-none transition">
-                      <option value="" disabled className="text-slate-900">Pilih jenis mitra</option>
-                      <option value="driver" className="text-slate-900">Driver</option>
-                      <option value="merchant" className="text-slate-900">Merchant</option>
-                    </select>
+                    <div className="relative">
+                      <select required name="mitraType" defaultValue="" className="peer w-full appearance-none pl-4 pr-11 py-3 rounded-xl bg-white/10 border border-white/15 text-white focus:ring-2 focus:ring-kilatgo-accent/60 focus:border-kilatgo-accent outline-none transition cursor-pointer invalid:text-white/40">
+                        <option value="" disabled hidden className="text-slate-900">Pilih jenis mitra</option>
+                        <option value="driver" className="text-slate-900">Driver</option>
+                        <option value="merchant" className="text-slate-900">Merchant</option>
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-kilatgo-300 peer-focus:text-kilatgo-accent transition" />
+                    </div>
                   </div>
                 </div>
                 <button type="submit" className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-kilatgo-950 bg-kilatgo-accent hover:bg-kilatgo-accent-dark transition active:scale-[0.98] shadow-lg shadow-kilatgo-accent/20">
@@ -487,15 +487,21 @@ export default function LandingPage() {
             <h4 className="text-sm font-semibold text-white mb-4">Perusahaan</h4>
             <ul className="space-y-2.5 text-sm text-kilatgo-300">
               <li><a href="#keunggulan" className="hover:text-kilatgo-accent transition">Tentang Kami</a></li>
-              <li><Link to="/login" className="hover:text-kilatgo-accent transition">Masuk Admin</Link></li>
               <li><a href="#download" className="hover:text-kilatgo-accent transition">Jadi Mitra Driver</a></li>
-              <li><a href="#" className="hover:text-kilatgo-accent transition">Bantuan</a></li>
+              <li><Link to="/faq" className="hover:text-kilatgo-accent transition">FAQ / Bantuan</Link></li>
+              <li><Link to="/kontak" className="hover:text-kilatgo-accent transition">Kontak</Link></li>
             </ul>
           </div>
         </div>
         <div className="border-t border-white/10">
-          <div className="max-w-7xl mx-auto px-6 lg:px-10 py-6 text-center text-xs text-kilatgo-400">
-            © 2026 KilatGo. Seluruh hak cipta dilindungi.
+          <div className="max-w-7xl mx-auto px-6 lg:px-10 py-6 flex flex-wrap items-center justify-between gap-3 text-xs text-kilatgo-400">
+            <span>© 2026 KilatGo. Seluruh hak cipta dilindungi.</span>
+            <nav className="flex flex-wrap gap-x-5 gap-y-2">
+              <Link to="/faq" className="hover:text-kilatgo-accent transition">FAQ</Link>
+              <Link to="/refund-policy" className="hover:text-kilatgo-accent transition">Kebijakan Refund</Link>
+              <Link to="/syarat-ketentuan" className="hover:text-kilatgo-accent transition">Syarat &amp; Ketentuan</Link>
+              <Link to="/kontak" className="hover:text-kilatgo-accent transition">Kontak</Link>
+            </nav>
           </div>
         </div>
       </footer>

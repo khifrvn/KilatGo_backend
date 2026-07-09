@@ -15,6 +15,7 @@ import DriversPage from './pages/DriversPage';
 import ApprovalPage from './pages/ApprovalPage';
 import OrdersPage from './pages/OrdersPage';
 import EarningsPage from './pages/EarningsPage';
+import { FaqPage, RefundPage, TermsPage, ContactPage } from './pages/InfoPages';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -30,6 +31,10 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/daftar-driver" element={<RegisterDriverPage />} />
           <Route path="/daftar-merchant" element={<RegisterMerchantPage />} />
+          <Route path="/faq" element={<FaqPage />} />
+          <Route path="/refund-policy" element={<RefundPage />} />
+          <Route path="/syarat-ketentuan" element={<TermsPage />} />
+          <Route path="/kontak" element={<ContactPage />} />
           <Route path="/merchant" element={<ProtectedRoute><MerchantPortalPage /></ProtectedRoute>} />
           <Route
             path="/admin/*"

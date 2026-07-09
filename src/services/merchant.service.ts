@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { UserRole, UserStatus } from '@prisma/client';
 import { prisma } from '../config/database';
-import { generateToken } from '../utils/jwt';
+import { generateTokens } from '../utils/jwt';
 import { AppError } from '../middleware/error.middleware';
 
 export interface RegisterMerchantInput {
@@ -71,9 +71,11 @@ export async function registerMerchant(input: RegisterMerchantInput) {
     },
   });
 
-  const token = generateToken({ userId: user.id, email: user.email, role: user.role });
+  const { accessToken, refreshToken } = generateTokens({ userId: user.id, email: user.email, role: user.role });
   return {
-    token,
+    token: accessToken,
+    accessToken,
+    refreshToken,
     user: { id: user.id, email: user.email, name: user.name, phone: user.phone, role: user.role, status: user.status },
   };
 }

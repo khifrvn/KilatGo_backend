@@ -10,6 +10,7 @@ export const createOrderSchema = z.object({
   dropoffAddress: z.string().min(5),
   paymentMethod: z.nativeEnum(PaymentMethod).default(PaymentMethod.CASH),
   serviceType: z.nativeEnum(ServiceType).default(ServiceType.RIDE),
+  voucherCode: z.string().optional(),
   notes: z.string().optional(),
 });
 

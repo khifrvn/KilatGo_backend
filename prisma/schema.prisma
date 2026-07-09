@@ -336,6 +336,8 @@ model Order {
 
   distanceKm      Float         @map("distance_km")
   baseFare        Decimal       @map("base_fare") @db.Decimal(10, 2)
+  discount        Decimal       @default(0) @db.Decimal(10, 2)
+  voucherCode     String?       @map("voucher_code")
   totalFare       Decimal       @map("total_fare") @db.Decimal(10, 2)
 
   paymentMethod   PaymentMethod @default(CASH) @map("payment_method")
