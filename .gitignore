@@ -45,3 +45,7 @@ tmp/
 .kimchi/
 agent/
 skills-lock.json
+
+# Firebase admin service account (RAHASIA)
+secrets/
+*-adminsdk-*.json

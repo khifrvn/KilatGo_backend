@@ -3,12 +3,13 @@ import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { login } from '../api/auth';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('admin@kilatgo.com');
-  const [password, setPassword] = useState('KilatGo!Admin2026');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { login: authLogin } = useAuth();
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ export default function LoginPage() {
       navigate(response.user.role === 'MERCHANT' ? '/merchant' : '/admin', { replace: true });
     } catch (err: any) {
       setError(
-        err.response?.data?.message || 'Login failed. Please check your credentials.'
+        err.response?.data?.message || 'Gagal masuk. Periksa kembali email dan kata sandi Anda.'
       );
     } finally {
       setIsLoading(false);
@@ -62,10 +63,10 @@ export default function LoginPage() {
               />
             </div>
             <h1 className="text-2xl font-bold text-kilatgo-950 mb-2">
-              Admin Dashboard
+              Dasbor Admin
             </h1>
             <p className="text-sm text-slate-500">
-              Sign in to manage your ride-hailing platform
+              Masuk untuk mengelola platform ride-hailing Anda
             </p>
           </div>
 
@@ -82,7 +83,7 @@ export default function LoginPage() {
                 htmlFor="email"
                 className="block text-sm font-medium text-slate-700 mb-1.5"
               >
-                Email address
+                Akun Admin
               </label>
               <input
                 id="email"
@@ -90,7 +91,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-kilatgo-400 focus:border-kilatgo-400 outline-none transition"
-                placeholder="admin@kilatgo.com"
+                placeholder="Masukkan akun admin terdaftar"
                 required
               />
             </div>
@@ -100,17 +101,28 @@ export default function LoginPage() {
                 htmlFor="password"
                 className="block text-sm font-medium text-slate-700 mb-1.5"
               >
-                Password
+                Kata Sandi
               </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-kilatgo-400 focus:border-kilatgo-400 outline-none transition"
-                placeholder="••••••••"
-                required
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-4 pr-11 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-kilatgo-400 focus:border-kilatgo-400 outline-none transition"
+                  placeholder="••••••••"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Lihat kata sandi'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
 
             <button
@@ -121,7 +133,7 @@ export default function LoginPage() {
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-kilatgo-950/30 border-t-kilatgo-950 rounded-full animate-spin"></div>
               ) : (
-                'Sign In'
+                'Masuk'
               )}
             </button>
           </form>

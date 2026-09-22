@@ -15,8 +15,10 @@ import {
   Activity,
   UserCheck,
   Package,
+  Store,
 } from 'lucide-react';
 import { getDashboardStats, getPendingDrivers } from '../api/admin';
+import { IMAGE_BASE } from '../api/client';
 import type { DashboardStats, Driver, Order } from '../types';
 import {
   BarChart,
@@ -43,10 +45,11 @@ interface StatCardProps {
   color: string;
   subtitle?: string;
   trend?: string;
+  className?: string;
 }
 
-const StatCard = ({ title, value, icon: Icon, color, subtitle, trend }: StatCardProps) => (
-  <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+const StatCard = ({ title, value, icon: Icon, color, subtitle, trend, className = '' }: StatCardProps) => (
+  <div className={`bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow ${className}`}>
     <div className="flex items-start justify-between mb-4">
       <div className={`p-3 rounded-xl ${color}`}>
         <Icon className="w-6 h-6 text-white" />
@@ -92,6 +95,31 @@ const statusColors: Record<string, string> = {
 
 const formatStatus = (status: string) => status.replace(/_/g, ' ');
 
+// Foto profil customer (publik). Foto driver (selfie) privat → lewat endpoint ber-token.
+const avatarUrl = (avatar?: string | null) => (avatar ? `${IMAGE_BASE}avatars/${avatar}` : null);
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const docUrl = (name?: string | null) =>
+  name ? `${API_BASE}/admin/files/${name}?token=${localStorage.getItem('kilatgo_token')}` : null;
+
+// Avatar bulat: foto bila ada (src siap-pakai), else inisial nama.
+const Avatar = ({ name, src, size = 40 }: { name: string; src?: string | null; size?: number }) => (
+  <div
+    className="rounded-full bg-kilatgo-100 flex items-center justify-center text-kilatgo-700 font-semibold text-sm flex-shrink-0 overflow-hidden"
+    style={{ width: size, height: size }}
+  >
+    {src ? (
+      <img
+        src={src}
+        alt=""
+        className="w-full h-full object-cover"
+        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+      />
+    ) : (
+      name.charAt(0).toUpperCase()
+    )}
+  </div>
+);
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [pendingDrivers, setPendingDrivers] = useState<Driver[]>([]);
@@ -108,7 +136,7 @@ export default function DashboardPage() {
         setStats(statsData);
         setPendingDrivers(driversData);
       } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to load dashboard data');
+        setError(err.response?.data?.message || 'Gagal memuat data dasbor');
       } finally {
         setIsLoading(false);
       }
@@ -141,55 +169,63 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <p className="text-sm font-medium text-kilatgo-500 uppercase tracking-wider mb-1">
-            Overview
+            Ringkasan
           </p>
-          <h1 className="text-3xl font-bold text-kilatgo-950">Dashboard</h1>
+          <h1 className="text-3xl font-bold text-kilatgo-950">Dasbor</h1>
         </div>
-        <p className="text-sm text-slate-500">Platform performance at a glance</p>
+        <p className="text-sm text-slate-500">Ringkasan performa platform</p>
       </div>
 
       {/* Stats grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatCard
-          title="Total Users"
+          title="Total Pengguna"
           value={stats?.users.total || 0}
           icon={Users}
           color="bg-kilatgo-500"
-          subtitle={`${stats?.users.customers || 0} customers · ${stats?.users.drivers || 0} drivers`}
+          subtitle={`${stats?.users.customers || 0} pelanggan · ${stats?.users.drivers || 0} driver · ${stats?.users.merchants || 0} mitra`}
         />
         <StatCard
-          title="Total Orders"
+          title="Total Pesanan"
           value={stats?.orders.total || 0}
           icon={ClipboardList}
           color="bg-kilatgo-700"
-          subtitle={`${stats?.orders.pending || 0} pending approval`}
+          subtitle={`${stats?.orders.pending || 0} menunggu persetujuan`}
         />
         <StatCard
-          title="Total Earnings"
+          title="Total Pendapatan"
           value={`Rp ${(stats?.earnings || 0).toLocaleString('id-ID')}`}
           icon={DollarSign}
           color="bg-emerald-500"
-          trend="Lifetime"
+          trend="Total"
         />
         <StatCard
-          title="Customers"
+          title="Pelanggan"
           value={stats?.users.customers || 0}
           icon={UserCircle}
           color="bg-kilatgo-400"
         />
         <StatCard
-          title="Drivers"
+          title="Driver"
           value={stats?.users.drivers || 0}
           icon={Car}
           color="bg-kilatgo-600"
-          subtitle={`${stats?.drivers.pendingApproval || 0} awaiting approval`}
+          subtitle={`${stats?.drivers.pendingApproval || 0} menunggu persetujuan`}
         />
         <StatCard
-          title="Pending Approvals"
+          title="Mitra"
+          value={stats?.users.merchants || 0}
+          icon={Store}
+          color="bg-kilatgo-700"
+          subtitle="Mitra KilatFood"
+        />
+        <StatCard
+          title="Menunggu Persetujuan"
           value={stats?.drivers.pendingApproval || 0}
           icon={Clock}
           color="bg-kilatgo-accent"
-          subtitle="Driver registration approvals"
+          subtitle="Persetujuan pendaftaran driver"
+          className="md:col-span-2 lg:col-span-3"
         />
       </div>
 
@@ -198,8 +234,8 @@ export default function DashboardPage() {
         {/* Earnings trend */}
         <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
           <SectionHeader
-            title="Earnings Trend"
-            subtitle="Last 14 days revenue"
+            title="Tren Pendapatan"
+            subtitle="Pendapatan 14 hari terakhir"
             icon={TrendingUp}
           />
           <div className="h-72">
@@ -228,7 +264,7 @@ export default function DashboardPage() {
                     borderRadius: '12px',
                   }}
                   labelFormatter={(label) => formatDate(label as string)}
-                  formatter={(value) => [`Rp ${Number(value).toLocaleString('id-ID')}`, 'Earnings']}
+                  formatter={(value) => [`Rp ${Number(value).toLocaleString('id-ID')}`, 'Pendapatan']}
                 />
                 <Area
                   type="monotone"
@@ -245,8 +281,8 @@ export default function DashboardPage() {
         {/* Driver status distribution */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
           <SectionHeader
-            title="Driver Status"
-            subtitle="Current driver availability"
+            title="Status Driver"
+            subtitle="Ketersediaan driver saat ini"
             icon={Activity}
           />
           <div className="h-72">
@@ -260,6 +296,7 @@ export default function DashboardPage() {
                   outerRadius={90}
                   paddingAngle={4}
                   dataKey="count"
+                  nameKey="status"
                 >
                   {(stats?.driverStatusDistribution || []).map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
@@ -271,7 +308,7 @@ export default function DashboardPage() {
                     border: '1px solid #e2e8f0',
                     borderRadius: '12px',
                   }}
-                  formatter={(value, _name, props) => [`${value} drivers`, props.payload.status]}
+                  formatter={(value, _name, props) => [`${value} driver`, props.payload.status]}
                 />
                 <Legend
                   verticalAlign="bottom"
@@ -290,8 +327,8 @@ export default function DashboardPage() {
         {/* Orders trend */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
           <SectionHeader
-            title="Orders Trend"
-            subtitle="Daily orders in the last 14 days"
+            title="Tren Pesanan"
+            subtitle="Pesanan harian 14 hari terakhir"
             icon={Package}
           />
           <div className="h-72">
@@ -314,7 +351,7 @@ export default function DashboardPage() {
                     borderRadius: '12px',
                   }}
                   labelFormatter={(label) => formatDate(label as string)}
-                  formatter={(value) => [`${value} orders`, 'Orders']}
+                  formatter={(value) => [`${value} pesanan`, 'Pesanan']}
                 />
                 <Bar dataKey="count" fill="#2563eb" radius={[6, 6, 0, 0]} />
               </BarChart>
@@ -325,8 +362,8 @@ export default function DashboardPage() {
         {/* User growth */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
           <SectionHeader
-            title="User Growth"
-            subtitle="New user registrations last 14 days"
+            title="Pertumbuhan Pengguna"
+            subtitle="Pendaftaran pengguna baru 14 hari terakhir"
             icon={UserCheck}
           />
           <div className="h-72">
@@ -349,7 +386,7 @@ export default function DashboardPage() {
                     borderRadius: '12px',
                   }}
                   labelFormatter={(label) => formatDate(label as string)}
-                  formatter={(value) => [`${value} users`, 'New Users']}
+                  formatter={(value) => [`${value} pengguna`, 'Pengguna Baru']}
                 />
                 <Line
                   type="monotone"
@@ -370,8 +407,8 @@ export default function DashboardPage() {
         {/* Order status distribution */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
           <SectionHeader
-            title="Order Status"
-            subtitle="Distribution by current status"
+            title="Status Pesanan"
+            subtitle="Distribusi per status"
             icon={ClipboardList}
           />
           <div className="h-72">
@@ -385,6 +422,7 @@ export default function DashboardPage() {
                   outerRadius={80}
                   paddingAngle={3}
                   dataKey="count"
+                  nameKey="status"
                 >
                   {(stats?.orderStatusDistribution || []).map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
@@ -396,7 +434,7 @@ export default function DashboardPage() {
                     border: '1px solid #e2e8f0',
                     borderRadius: '12px',
                   }}
-                  formatter={(value, name) => [`${value} orders`, formatStatus(name as string)]}
+                  formatter={(value, name) => [`${value} pesanan`, formatStatus(name as string)]}
                 />
                 <Legend
                   verticalAlign="bottom"
@@ -414,8 +452,8 @@ export default function DashboardPage() {
         {/* Recent orders */}
         <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
           <SectionHeader
-            title="Recent Orders"
-            subtitle="Latest ride bookings"
+            title="Pesanan Terbaru"
+            subtitle="Pesanan terbaru"
             icon={Calendar}
           />
           <div className="space-y-3">
@@ -426,9 +464,7 @@ export default function DashboardPage() {
                   className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-kilatgo-200 transition"
                 >
                   <div className="flex items-center gap-4 min-w-0">
-                    <div className="w-10 h-10 rounded-full bg-kilatgo-100 flex items-center justify-center text-kilatgo-700 font-semibold text-sm flex-shrink-0">
-                      {order.customer.user.name.charAt(0).toUpperCase()}
-                    </div>
+                    <Avatar name={order.customer.user.name} src={avatarUrl(order.customer.user.avatar)} />
                     <div className="min-w-0">
                       <p className="font-semibold text-sm text-kilatgo-950 truncate">
                         {order.customer.user.name}
@@ -457,7 +493,7 @@ export default function DashboardPage() {
               ))
             ) : (
               <div className="text-center py-8 text-slate-400">
-                No recent orders
+                Belum ada pesanan
               </div>
             )}
           </div>
@@ -469,8 +505,8 @@ export default function DashboardPage() {
         {/* Top drivers */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
           <SectionHeader
-            title="Top Drivers"
-            subtitle="Highest completed rides"
+            title="Driver Teratas"
+            subtitle="Order selesai terbanyak"
             icon={Star}
           />
           <div className="space-y-3">
@@ -483,9 +519,7 @@ export default function DashboardPage() {
                   <div className="w-7 h-7 rounded-full bg-kilatgo-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
                     {index + 1}
                   </div>
-                  <div className="w-10 h-10 rounded-full bg-kilatgo-100 flex items-center justify-center text-kilatgo-700 font-semibold text-sm flex-shrink-0">
-                    {driver.user.name.charAt(0).toUpperCase()}
-                  </div>
+                  <Avatar name={driver.user.name} src={docUrl(driver.selfiePhoto)} />
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm text-kilatgo-950 truncate">
                       {driver.user.name}
@@ -497,12 +531,12 @@ export default function DashboardPage() {
                       <Star className="w-4 h-4 text-kilatgo-accent fill-kilatgo-accent" />
                       {driver.rating.toFixed(1)}
                     </div>
-                    <p className="text-xs text-slate-500">{driver.totalRides} rides</p>
+                    <p className="text-xs text-slate-500">{driver.totalRides} order</p>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="text-center py-8 text-slate-400">No drivers yet</div>
+              <div className="text-center py-8 text-slate-400">Belum ada driver</div>
             )}
           </div>
         </div>
@@ -515,8 +549,8 @@ export default function DashboardPage() {
                 <Clock className="w-5 h-5 text-kilatgo-600" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-kilatgo-950">Pending Approvals</h2>
-                <p className="text-xs text-slate-500">Driver registration requests</p>
+                <h2 className="text-lg font-bold text-kilatgo-950">Menunggu Persetujuan</h2>
+                <p className="text-xs text-slate-500">Permintaan pendaftaran driver</p>
               </div>
             </div>
             <span className="bg-kilatgo-accent/20 text-kilatgo-900 text-xs font-bold px-2.5 py-1 rounded-full">
@@ -529,7 +563,7 @@ export default function DashboardPage() {
               <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-kilatgo-100 flex items-center justify-center">
                 <Car className="w-6 h-6 text-kilatgo-400" />
               </div>
-              <p className="text-sm text-slate-500 font-medium">No pending approvals</p>
+              <p className="text-sm text-slate-500 font-medium">Tidak ada yang menunggu persetujuan</p>
             </div>
           ) : (
             <div className="space-y-3 max-h-[340px] overflow-auto pr-1">
@@ -557,7 +591,7 @@ export default function DashboardPage() {
                     href="/drivers"
                     className="text-xs font-bold text-kilatgo-600 hover:text-kilatgo-800 whitespace-nowrap"
                   >
-                    Review
+                    Tinjau
                   </a>
                 </div>
               ))}

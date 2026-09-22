@@ -1,7 +1,9 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle2, Loader2, Upload, ArrowLeft } from 'lucide-react';
 import { registerMerchant } from '../api/auth';
+import { getPublicSettings } from '../api/admin';
+import { RegistrationClosed } from './RegisterDriverPage';
 
 const inputCls =
   'w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-kilatgo-400 focus:border-kilatgo-400 outline-none transition';
@@ -40,6 +42,65 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+export const MERCHANT_TERMS: { title: string; note?: string; items: string[] }[] = [
+  {
+    title: 'A. Syarat Pendaftaran',
+    items: [
+      'Memiliki usaha kuliner legal: warung, resto, cafe, UMKM',
+      'Memiliki KTP pemilik usaha & NPWP/Surat Keterangan Usaha',
+      'Memiliki menu, harga, dan foto produk yang jelas',
+      'Memiliki HP Android untuk aplikasi Merchant KilatGo',
+      'Memiliki rekening bank/e-wallet atas nama usaha/pribadi',
+    ],
+  },
+  {
+    title: 'B. Kewajiban Merchant',
+    items: [
+      'Menjaga kualitas, kebersihan, dan keamanan makanan',
+      'Harga di aplikasi = harga di outlet (markup sewajarnya)',
+      'Konfirmasi & siapkan pesanan dalam 10–15 menit',
+      'Update status menu "Habis/Tersedia" secara berkala',
+      'Bersedia menerima order dari jam buka s/d jam tutup',
+    ],
+  },
+  {
+    title: 'C. Hak & Keuntungan Merchant',
+    items: [
+      'Komisi KilatGo hanya 20% per transaksi',
+      'Pencairan dana kapan saja, biaya admin Rp 2.500',
+      'Promosi gratis melalui aplikasi KilatGo & media sosial',
+      'Laporan penjualan real-time di aplikasi Merchant',
+      'Dukungan Tim CS KilatGo',
+    ],
+  },
+  {
+    title: 'D. Ketentuan Biaya & Transaksi',
+    items: [
+      'Komisi: 20% dari total harga makanan. Ongkir ditanggung customer',
+      'Minimal order: tidak ada minimal order dari merchant',
+      'Pembatalan: jika merchant cancel >3x/minggu, akun bisa disuspend',
+    ],
+  },
+  {
+    title: 'E. Larangan & Sanksi',
+    note: 'Sanksi: teguran, denda, hingga pemutusan mitra jika:',
+    items: [
+      'Menjual makanan expired, tidak layak, atau berbeda dari foto',
+      'Menolak pesanan yang sudah masuk tanpa alasan jelas',
+      'Melakukan kecurangan harga atau transaksi di luar aplikasi',
+      'Rating resto < 3.5 terus-menerus karena komplain',
+    ],
+  },
+  {
+    title: 'F. Ketentuan Lain',
+    items: [
+      'Hubungan ini adalah kemitraan, bukan franchise',
+      'KilatGo berhak mengubah S&K kapan pun tanpa pemberitahuan',
+      'Data usaha dijaga kerahasiaannya sesuai UU PDP',
+    ],
+  },
+];
+
 export default function RegisterMerchantPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -47,6 +108,16 @@ export default function RegisterMerchantPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
+  const [agreed, setAgreed] = useState(false);
+  const [regClosed, setRegClosed] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    getPublicSettings()
+      .then((s) => setRegClosed(s.merchant_registration_open === '0'))
+      .catch(() => {})
+      .finally(() => setChecking(false));
+  }, []);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -54,6 +125,10 @@ export default function RegisterMerchantPage() {
     const fd = new FormData(e.currentTarget);
     if (!/^\d{16}$/.test((fd.get('nik') as string) || '')) {
       setError('NIK harus 16 digit angka.');
+      return;
+    }
+    if (!agreed) {
+      setError('Anda harus menyetujui Syarat & Ketentuan Mitra Merchant.');
       return;
     }
     try {
@@ -66,6 +141,11 @@ export default function RegisterMerchantPage() {
       setLoading(false);
     }
   };
+
+  if (checking) {
+    return <div className="min-h-screen bg-kilatgo-950 flex items-center justify-center"><Loader2 className="w-8 h-8 text-white animate-spin" /></div>;
+  }
+  if (regClosed) return <RegistrationClosed title="Pendaftaran Mitra Ditutup" />;
 
   if (done) {
     return (
@@ -111,7 +191,7 @@ export default function RegisterMerchantPage() {
                 </Field>
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
-                <Field label="Password" required>
+                <Field label="Kata Sandi" required>
                   <input name="password" type="password" required minLength={6} placeholder="••••••••" className={inputCls} />
                 </Field>
                 <Field label="NIK pemilik (16 digit)" required>
@@ -161,7 +241,7 @@ export default function RegisterMerchantPage() {
               </div>
             </Section>
 
-            <Section title="Dokumen (upload foto)">
+            <Section title="Dokumen (unggah foto)">
               <div className="grid sm:grid-cols-3 gap-4">
                 <FileField label="Foto e-KTP" name="ktpPhoto" required />
                 <FileField label="Foto outlet" name="outletPhoto" required />
@@ -169,10 +249,36 @@ export default function RegisterMerchantPage() {
               </div>
             </Section>
 
-            <button type="submit" disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-semibold text-kilatgo-950 bg-kilatgo-accent hover:bg-kilatgo-accent-dark transition active:scale-[0.99] disabled:opacity-60">
+            {/* Syarat & Ketentuan Mitra Merchant */}
+            <Section title="Syarat & Ketentuan">
+              <p className="text-sm text-slate-600 -mt-1 mb-2">
+                Dengan mendaftar sebagai Mitra Merchant KilatGo, Anda dianggap telah membaca, memahami, dan menyetujui seluruh poin di bawah ini:
+              </p>
+              <div className="max-h-72 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+                {MERCHANT_TERMS.map((sec) => (
+                  <div key={sec.title}>
+                    <p className="text-sm font-bold text-kilatgo-900">{sec.title}</p>
+                    {sec.note && <p className="text-xs text-slate-500 mt-1">{sec.note}</p>}
+                    <ol className="mt-1.5 space-y-1 list-decimal list-inside text-sm text-slate-600 marker:text-kilatgo-400 marker:font-semibold">
+                      {sec.items.map((it, i) => <li key={i} className="pl-1">{it}</li>)}
+                    </ol>
+                  </div>
+                ))}
+              </div>
+              <label className="flex items-start gap-3 cursor-pointer mt-3 select-none">
+                <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)}
+                  className="mt-0.5 w-5 h-5 rounded border-slate-300 text-kilatgo-600 focus:ring-kilatgo-400 accent-kilatgo-600" />
+                <span className="text-sm text-slate-700">
+                  Saya telah membaca dan <span className="font-semibold">menyetujui seluruh Syarat &amp; Ketentuan</span> menjadi Mitra Merchant KilatGo, termasuk{' '}
+                  <Link to="/kebijakan-privasi" target="_blank" className="font-semibold text-kilatgo-600 hover:underline">Kebijakan Privasi</Link>.
+                </span>
+              </label>
+            </Section>
+
+            <button type="submit" disabled={loading || !agreed}
+              className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-semibold text-kilatgo-950 bg-kilatgo-accent hover:bg-kilatgo-accent-dark transition active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed">
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-              {loading ? 'Mengirim...' : 'Kirim Pendaftaran'}
+              {loading ? 'Mengirim...' : 'Saya Setuju & Kirim Pendaftaran'}
             </button>
           </form>
         </div>

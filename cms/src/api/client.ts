@@ -2,6 +2,9 @@ import axios, { AxiosError } from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
+// Base file publik (logo/menu). `.../api` → `.../uploads/`.
+export const IMAGE_BASE = API_BASE_URL.replace(/\/api$/, '') + '/uploads/';
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {

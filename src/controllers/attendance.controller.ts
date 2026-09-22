@@ -36,6 +36,14 @@ export async function enrollFace(req: Request, res: Response, next: NextFunction
   }
 }
 
+export async function faceStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    successResponse(res, 'Status wajah', await attendanceService.getFaceStatus(req.user!.userId));
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function myAttendance(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const data = await attendanceService.listMyAttendance(req.user!.userId);

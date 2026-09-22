@@ -11,10 +11,21 @@ export interface User {
   email: string;
   name: string;
   phone: string;
+  avatar?: string | null;
   role: 'CUSTOMER' | 'DRIVER' | 'ADMIN' | 'MERCHANT';
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PENDING';
+  isSuperAdmin?: boolean;
+  permissions?: string[];
   createdAt: string;
   updatedAt: string;
+  customer?: {
+    balance: number | string;
+    rating?: number;
+    totalRatings?: number;
+    totalRides?: number;
+  } | null;
+  driver?: { selfiePhoto?: string | null } | null;
+  merchant?: { logo?: string | null } | null;
 }
 
 export interface MerchantMenu {
@@ -51,6 +62,10 @@ export interface Merchant {
   npwpPhoto?: string | null;
   kycStatus?: 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
   isApproved: boolean;
+  isOpen?: boolean;
+  description?: string | null;
+  logo?: string | null;
+  balance?: number | string;
   user: User;
   menus?: MerchantMenu[];
 }
@@ -77,6 +92,8 @@ export interface Driver {
   rating: number;
   totalRides: number;
   isApproved: boolean;
+  earningsBalance?: number | string;
+  creditBalance?: number | string;
   user: User;
   // Data lengkap pendaftaran (Fase 1)
   nik?: string | null;
@@ -147,6 +164,7 @@ export interface DashboardStats {
     total: number;
     customers: number;
     drivers: number;
+    merchants: number;
   };
   orders: {
     total: number;
@@ -172,8 +190,27 @@ export interface LoginResponse {
   user: User;
 }
 
+export interface EarningsOrderRow {
+  id: string;
+  serviceType: string;
+  totalFare: number;
+  driverFare: number;
+  itemsTotal: number;
+  serviceFee: number;
+  platformRevenue: number;
+  paymentMethod: string;
+  customerName: string;
+  completedAt: string | null;
+  createdAt: string;
+}
+
 export interface EarningsReport {
-  total: number;
+  gmv: number;
+  platformRevenue: number;
+  driverPayout: number;
+  merchantPayout: number;
   count: number;
-  payments: Payment[];
+  commissionPct: number;
+  foodCommissionPct: number;
+  orders: EarningsOrderRow[];
 }

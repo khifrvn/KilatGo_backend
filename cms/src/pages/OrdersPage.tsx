@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Search, ClipboardList, ChevronLeft, ChevronRight, MapPin, Calendar } from 'lucide-react';
-import { getAllOrders } from '../api/admin';
+import { getAllOrders, updateOrderStatus } from '../api/admin';
 import type { Order } from '../types';
 
 const orderStatuses = [
@@ -35,6 +35,7 @@ export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
 
   const fetchOrders = async () => {
     try {
@@ -47,7 +48,7 @@ export default function OrdersPage() {
       setOrders(result.data);
       setMeta(result.meta);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load orders');
+      setError(err.response?.data?.message || 'Gagal memuat pesanan');
     } finally {
       setIsLoading(false);
     }
@@ -64,15 +65,32 @@ export default function OrdersPage() {
       (order.driver?.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
   );
 
+  const handleUpdateStatus = async (orderId: string, newStatus: string) => {
+    // Selesai/Batal punya efek uang (komisi, pendapatan driver, refund) & tak bisa diurungkan.
+    const warn = newStatus === 'COMPLETED' || newStatus === 'CANCELLED';
+    if (warn && !confirm(`Ubah status pesanan ke ${newStatus.replace(/_/g, ' ')}? Status ini final dan memengaruhi saldo driver/pelanggan.`)) return;
+    try {
+      setError('');
+      setUpdatingOrderId(orderId);
+      await updateOrderStatus(orderId, newStatus);
+      // Refresh orders after update
+      await fetchOrders();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Gagal mengubah status pesanan');
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <p className="text-sm font-medium text-kilatgo-500 uppercase tracking-wider mb-1">
-            Management
+            Manajemen
           </p>
-          <h1 className="text-3xl font-bold text-kilatgo-950">Orders</h1>
+          <h1 className="text-3xl font-bold text-kilatgo-950">Pesanan</h1>
         </div>
       </div>
 
@@ -82,7 +100,7 @@ export default function OrdersPage() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
           <input
             type="text"
-            placeholder="Search order number, customer, or driver"
+            placeholder="Cari nomor pesanan, pelanggan, atau driver"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-kilatgo-400 focus:border-kilatgo-400 outline-none transition"
@@ -96,7 +114,7 @@ export default function OrdersPage() {
           }}
           className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-kilatgo-400 focus:border-kilatgo-400 outline-none min-w-[180px]"
         >
-          <option value="">All Statuses</option>
+          <option value="">Semua Status</option>
           {orderStatuses.map((status) => (
             <option key={status} value={status}>
               {status.replace(/_/g, ' ')}
@@ -122,7 +140,7 @@ export default function OrdersPage() {
             <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
               <ClipboardList className="w-8 h-8 text-slate-400" />
             </div>
-            <p className="text-sm font-medium">No orders found</p>
+            <p className="text-sm font-medium">Tidak ada pesanan</p>
           </div>
         ) : (
           <>
@@ -131,25 +149,28 @@ export default function OrdersPage() {
                 <thead className="bg-slate-50 border-b border-slate-100">
                   <tr>
                     <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      Order ID
+                      ID Pesanan
                     </th>
                     <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      Customer
+                      Pelanggan
                     </th>
                     <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       Driver
                     </th>
                     <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      Route
+                      Rute
                     </th>
                     <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       Status
                     </th>
                     <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      Fare
+                      Tarif
                     </th>
                     <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      Date
+                      Tanggal
+                    </th>
+                    <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      Aksi
                     </th>
                   </tr>
                 </thead>
@@ -172,7 +193,7 @@ export default function OrdersPage() {
                             <p className="text-xs text-slate-500">{order.driver.user.phone}</p>
                           </div>
                         ) : (
-                          <span className="text-sm text-slate-400">Not assigned</span>
+                          <span className="text-sm text-slate-400">Belum ditugaskan</span>
                         )}
                       </td>
                       <td className="px-6 py-4">
@@ -214,6 +235,28 @@ export default function OrdersPage() {
                           })}
                         </div>
                       </td>
+                      <td className="px-6 py-4">
+                        <div className="relative">
+                          <select
+                            value={order.status}
+                            onChange={(e) => handleUpdateStatus(order.id, e.target.value)}
+                            disabled={updatingOrderId === order.id || order.status === 'COMPLETED' || order.status === 'CANCELLED'}
+                            title={order.status === 'COMPLETED' || order.status === 'CANCELLED' ? 'Pesanan sudah final' : 'Ubah status pesanan'}
+                            className="px-3 py-1.5 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-kilatgo-400 focus:border-kilatgo-400 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {orderStatuses.map((status) => (
+                              <option key={status} value={status}>
+                                {status.replace(/_/g, ' ')}
+                              </option>
+                            ))}
+                          </select>
+                          {updatingOrderId === order.id && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-white/80">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-kilatgo-500"></div>
+                            </div>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -223,7 +266,7 @@ export default function OrdersPage() {
             {/* Pagination */}
             <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100">
               <p className="text-sm text-slate-500">
-                Showing {orders.length} of {meta.total} orders
+                Menampilkan {orders.length} dari {meta.total} pesanan
               </p>
               <div className="flex items-center gap-2">
                 <button
@@ -234,7 +277,7 @@ export default function OrdersPage() {
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <span className="text-sm font-semibold text-kilatgo-950 px-2">
-                  Page {meta.page} of {meta.totalPages}
+                  Halaman {meta.page} dari {meta.totalPages}
                 </span>
                 <button
                   onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}

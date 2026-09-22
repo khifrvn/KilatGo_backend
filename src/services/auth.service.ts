@@ -4,6 +4,8 @@ import { prisma } from '../config/database';
 import { generateTokens, verifyRefreshToken } from '../utils/jwt';
 import { AppError } from '../middleware/error.middleware';
 import { User } from '@prisma/client';
+import * as settingsService from './settings.service';
+import * as userService from './user.service';
 
 export interface RegisterCustomerInput {
   email: string;
@@ -62,16 +64,27 @@ export interface AuthResponse {
     phone: string;
     role: UserRole;
     status: UserStatus;
+    isSuperAdmin?: boolean;
+    permissions?: string[];
   };
 }
 
 /** Build the standard auth envelope (access + refresh + user) for a user row. */
-function buildAuthResponse(user: User): AuthResponse {
+async function buildAuthResponse(user: User): Promise<AuthResponse> {
   const { accessToken, refreshToken } = generateTokens({
     userId: user.id,
     email: user.email,
     role: user.role,
   });
+
+  // Untuk admin, sertakan flag superadmin + izin menu (dipakai CMS untuk RBAC menu).
+  let isSuperAdmin: boolean | undefined;
+  let permissions: string[] | undefined;
+  if (user.role === UserRole.ADMIN) {
+    const admin = await prisma.admin.findUnique({ where: { userId: user.id } });
+    isSuperAdmin = !!admin?.isSuperAdmin;
+    try { permissions = admin?.permissions ? JSON.parse(admin.permissions) : []; } catch { permissions = []; }
+  }
 
   return {
     token: accessToken,
@@ -84,6 +97,7 @@ function buildAuthResponse(user: User): AuthResponse {
       phone: user.phone,
       role: user.role,
       status: user.status,
+      ...(user.role === UserRole.ADMIN ? { isSuperAdmin, permissions } : {}),
     },
   };
 }
@@ -115,10 +129,15 @@ export async function registerCustomer(input: RegisterCustomerInput): Promise<Au
     },
   });
 
-  return buildAuthResponse(user);
+  return await buildAuthResponse(user);
 }
 
 export async function registerDriver(input: RegisterDriverInput): Promise<AuthResponse> {
+  const settings = await settingsService.getSettings();
+  if (settings.driver_registration_open === '0') {
+    throw new AppError('Pendaftaran driver sedang ditutup untuk saat ini.', 403);
+  }
+
   const existingUser = await prisma.user.findFirst({
     where: {
       OR: [{ email: input.email }, { phone: input.phone }],
@@ -126,7 +145,22 @@ export async function registerDriver(input: RegisterDriverInput): Promise<AuthRe
   });
 
   if (existingUser) {
-    throw new AppError('Email or phone number already registered', 409);
+    // Pendaftaran yang ditolak ditahan 3 hari (anti-spam daftar-ulang). Setelah lewat, akun lama
+    // dihapus di sini juga — jadi driver tetap bisa daftar ulang walau sweeper belum sempat jalan.
+    const rejected = await userService.purgeRejectedDriverUser(existingUser.id);
+    if (!rejected) {
+      throw new AppError('Email or phone number already registered', 409);
+    }
+    if (!rejected.deleted) {
+      const retry = rejected.retryAt.toLocaleString('id-ID', {
+        day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+        timeZone: 'Asia/Jakarta',
+      });
+      throw new AppError(
+        `Pendaftaran Anda sebelumnya ditolak. Anda dapat mendaftar ulang setelah ${retry} WIB.`,
+        409
+      );
+    }
   }
 
   const hashedPassword = await bcrypt.hash(input.password, 10);
@@ -171,7 +205,7 @@ export async function registerDriver(input: RegisterDriverInput): Promise<AuthRe
     },
   });
 
-  return buildAuthResponse(user);
+  return await buildAuthResponse(user);
 }
 
 export async function login(input: LoginInput): Promise<AuthResponse> {
@@ -183,17 +217,25 @@ export async function login(input: LoginInput): Promise<AuthResponse> {
     throw new AppError('Invalid email or password', 401);
   }
 
-  if (user.status === UserStatus.SUSPENDED) {
-    throw new AppError('Account has been suspended', 403);
-  }
-
   const isPasswordValid = await bcrypt.compare(input.password, user.password);
 
   if (!isPasswordValid) {
     throw new AppError('Invalid email or password', 401);
   }
 
-  return buildAuthResponse(user);
+  // Password benar tapi akun diblokir → kirim detail suspend (alasan + kontak banding)
+  // supaya app bisa menampilkan layar "Akun Diblokir" (bukan sekadar error login).
+  if (user.status === UserStatus.SUSPENDED) {
+    const s = await settingsService.getSettings();
+    throw new AppError('Akun Anda telah diblokir', 403, {
+      suspended: true,
+      reason: user.suspendReason || null,
+      contactWhatsapp: s.contact_whatsapp || null,
+      role: user.role,
+    });
+  }
+
+  return await buildAuthResponse(user);
 }
 
 /**
@@ -216,5 +258,5 @@ export async function refresh(refreshToken: string): Promise<AuthResponse> {
     throw new AppError('Account has been suspended', 403);
   }
 
-  return buildAuthResponse(user);
+  return await buildAuthResponse(user);
 }

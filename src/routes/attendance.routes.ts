@@ -9,6 +9,7 @@ const router = Router();
 // Driver: absen masuk (selfie + GPS) & riwayat sendiri
 router.post('/checkin', authenticateToken, authorizeRoles(UserRole.DRIVER), singlePhotoUpload, attendanceController.checkIn);
 router.post('/enroll-face', authenticateToken, authorizeRoles(UserRole.DRIVER), attendanceController.enrollFace);
+router.get('/face-status', authenticateToken, authorizeRoles(UserRole.DRIVER), attendanceController.faceStatus);
 router.get('/me', authenticateToken, authorizeRoles(UserRole.DRIVER), attendanceController.myAttendance);
 
 export default router;

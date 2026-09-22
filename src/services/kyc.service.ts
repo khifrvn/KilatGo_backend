@@ -19,9 +19,12 @@ export async function verify(subjectType: KycSubject, subjectId: string, input: 
   if (subjectType === KycSubject.DRIVER) {
     const d = await prisma.driver.findUnique({ where: { id: subjectId } });
     if (!d) throw new AppError('Driver not found', 404);
-  } else {
+  } else if (subjectType === KycSubject.MERCHANT) {
     const m = await prisma.merchant.findUnique({ where: { id: subjectId } });
     if (!m) throw new AppError('Merchant not found', 404);
+  } else {
+    const c = await prisma.customer.findUnique({ where: { id: subjectId } });
+    if (!c) throw new AppError('Customer not found', 404);
   }
 
   const status = input.approve ? KycStatus.VERIFIED : KycStatus.REJECTED;
@@ -43,8 +46,10 @@ export async function verify(subjectType: KycSubject, subjectId: string, input: 
 
   if (subjectType === KycSubject.DRIVER) {
     await prisma.driver.update({ where: { id: subjectId }, data: { kycStatus: status } });
-  } else {
+  } else if (subjectType === KycSubject.MERCHANT) {
     await prisma.merchant.update({ where: { id: subjectId }, data: { kycStatus: status } });
+  } else {
+    await prisma.customer.update({ where: { id: subjectId }, data: { kycStatus: status } });
   }
 
   return record;

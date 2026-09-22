@@ -38,7 +38,7 @@ export default function ErrorLogPage() {
           <p className="text-sm text-slate-500 mt-1">Error API/server & client terekam otomatis ({rows.length}).</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => load(level)} className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"><RefreshCw className="w-4 h-4" />Refresh</button>
+          <button onClick={() => load(level)} className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"><RefreshCw className="w-4 h-4" />Muat ulang</button>
           <button onClick={doClear} disabled={busy || rows.length === 0} className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50 transition"><Trash2 className="w-4 h-4" />Bersihkan</button>
         </div>
       </div>

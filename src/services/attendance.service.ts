@@ -66,3 +66,15 @@ export async function listAllAttendance(params: { date?: string } = {}) {
     take: 200,
   });
 }
+
+export async function deleteAttendance(id: string) {
+  await prisma.attendance.delete({ where: { id } });
+  return { ok: true };
+}
+
+// Apakah driver sudah punya wajah referensi (dari selfie KYC). Dipakai app untuk enroll sekali.
+export async function getFaceStatus(driverUserId: string) {
+  const driver = await prisma.driver.findUnique({ where: { userId: driverUserId }, select: { faceDescriptor: true } });
+  if (!driver) throw new AppError('Driver profile not found', 404);
+  return { enrolled: !!parseDescriptor(driver.faceDescriptor) };
+}

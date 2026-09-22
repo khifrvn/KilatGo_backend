@@ -1,7 +1,28 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { CheckCircle2, Loader2, Upload, ArrowLeft } from 'lucide-react';
+import { CheckCircle2, Loader2, Upload, ArrowLeft, Lock } from 'lucide-react';
 import { registerDriver } from '../api/auth';
+import { getPublicSettings } from '../api/admin';
+
+// Layar "pendaftaran ditutup" — dipakai halaman daftar driver & mitra.
+export function RegistrationClosed({ title }: { title: string }) {
+  return (
+    <div className="min-h-screen bg-kilatgo-950 flex items-center justify-center p-6">
+      <div className="bg-white rounded-3xl p-10 max-w-md text-center shadow-2xl">
+        <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-5">
+          <Lock className="w-8 h-8 text-amber-600" />
+        </div>
+        <h2 className="text-2xl font-bold text-kilatgo-950 mb-2">{title}</h2>
+        <p className="text-slate-500 mb-6">
+          Mohon maaf, untuk saat ini pendaftaran sedang <b>ditutup</b>. Silakan cek kembali nanti atau hubungi kami untuk informasi lebih lanjut.
+        </p>
+        <Link to="/" className="inline-flex px-6 py-3 rounded-xl font-semibold text-white bg-kilatgo-600 hover:bg-kilatgo-700 transition">
+          Kembali ke Beranda
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 const inputCls =
   'w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-kilatgo-400 focus:border-kilatgo-400 outline-none transition';
@@ -38,6 +59,64 @@ function FileField({ label, name, required }: { label: string; name: string; req
   );
 }
 
+export const DRIVER_TERMS: { title: string; note?: string; items: string[] }[] = [
+  {
+    title: 'A. Syarat Pendaftaran',
+    items: [
+      'Warga Negara Indonesia dan berdomisili di area operasional KilatGo',
+      'Usia 18 – 60 tahun',
+      'Memiliki KTP asli yang masih berlaku',
+      'Memiliki SIM C / SIM A yang masih berlaku',
+      'Memiliki kendaraan pribadi motor/mobil beserta STNK atas nama sendiri/keluarga',
+      'Memiliki HP Android minimal RAM 2GB dan nomor HP aktif',
+      'Memiliki rekening bank / e-wallet atas nama pribadi untuk pencairan dana',
+      'Sehat jasmani & rohani dan tidak memiliki catatan kriminal',
+      'Bersedia mengikuti KYC: upload KTP, Selfie + KTP, SIM, STNK, dan foto kendaraan',
+    ],
+  },
+  {
+    title: 'B. Kewajiban Mitra Driver',
+    items: [
+      'Melakukan Vermuk/Absensi setiap kali akan On-bid untuk keamanan akun',
+      'Menjaga sikap & pelayanan: sopan, jujur, amanah, dan tidak merokok saat membawa penumpang',
+      'Menjaga kebersihan & kelayakan kendaraan: helm 2, jaket, dan kondisi motor layak jalan',
+      'Mengikuti aturan aplikasi: tidak menerima order di luar aplikasi, tidak melakukan cancel fiktif',
+      'Menjaga kerahasiaan data customer dan tidak menyalahgunakannya',
+      'Wajib top up saldo untuk bisa menerima order KilatRide/KilatCar/KilatSend',
+    ],
+  },
+  {
+    title: 'C. Hak Mitra Driver',
+    items: [
+      'Jam kerja fleksibel: bebas On/Off sesuai keinginan',
+      'Komisi transparan: komisi KilatGo 20% untuk semua layanan',
+      'Pencairan dana fleksibel: WD ke rekening kapan saja, biaya admin Rp 2.500',
+      'Mendapatkan dukungan: bantuan CS dan pengarahan dari Tim KilatGo',
+      'Mendapatkan bonus & insentif sesuai program yang berlaku dari KilatGo',
+    ],
+  },
+  {
+    title: 'D. Larangan & Sanksi',
+    note: 'KilatGo berhak memberikan teguran, suspend sementara, hingga pemutusan kemitraan jika Mitra:',
+    items: [
+      'Menggunakan akun orang lain / joki / sewa akun',
+      'Melakukan penipuan, kekerasan, atau pelecehan kepada customer',
+      'Rating di bawah 3.0 secara terus-menerus karena pelayanan buruk',
+      'Melanggar hukum atau menggunakan kendaraan untuk tindak kriminal',
+      'Memodifikasi aplikasi atau melakukan fraud order',
+    ],
+  },
+  {
+    title: 'E. Ketentuan Lain',
+    items: [
+      'Hubungan kemitraan: Mitra Driver bukan karyawan KilatGo. Tidak ada gaji pokok, BPJS, atau THR',
+      'Perubahan aturan: KilatGo berhak mengubah S&K ini kapan saja tanpa pemberitahuan',
+      'Data pribadi: data yang diberikan dijaga kerahasiaannya sesuai UU PDP dan hanya digunakan untuk operasional KilatGo',
+      'Force majeure: KilatGo tidak bertanggung jawab atas gangguan sistem di luar kendali',
+    ],
+  },
+];
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-4">
@@ -56,6 +135,16 @@ export default function RegisterDriverPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
+  const [agreed, setAgreed] = useState(false);
+  const [regClosed, setRegClosed] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    getPublicSettings()
+      .then((s) => setRegClosed(s.driver_registration_open === '0'))
+      .catch(() => {})
+      .finally(() => setChecking(false));
+  }, []);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -64,6 +153,10 @@ export default function RegisterDriverPage() {
     // NIK harus 16 digit
     if (!/^\d{16}$/.test((fd.get('nik') as string) || '')) {
       setError('NIK harus 16 digit angka.');
+      return;
+    }
+    if (!agreed) {
+      setError('Anda harus menyetujui Syarat & Ketentuan Mitra Driver.');
       return;
     }
     try {
@@ -76,6 +169,11 @@ export default function RegisterDriverPage() {
       setLoading(false);
     }
   };
+
+  if (checking) {
+    return <div className="min-h-screen bg-kilatgo-950 flex items-center justify-center"><Loader2 className="w-8 h-8 text-white animate-spin" /></div>;
+  }
+  if (regClosed) return <RegistrationClosed title="Pendaftaran Driver Ditutup" />;
 
   if (done) {
     return (
@@ -126,7 +224,7 @@ export default function RegisterDriverPage() {
                   <input name="phone" required defaultValue={prefill.phone} placeholder="08xxxxxxxxxx" className={inputCls} />
                 </Field>
               </div>
-              <Field label="Password (min. 6 karakter)" required>
+              <Field label="Kata Sandi (min. 6 karakter)" required>
                 <input name="password" type="password" required minLength={6} placeholder="••••••••" className={inputCls} />
               </Field>
             </Section>
@@ -221,7 +319,7 @@ export default function RegisterDriverPage() {
               </div>
             </Section>
 
-            <Section title="Dokumen (upload foto)">
+            <Section title="Dokumen (unggah foto)">
               <FileField label="Foto e-KTP" name="ktpPhoto" required />
               <FileField label="Selfie wajah (untuk KYC)" name="selfiePhoto" required />
               <div className="grid sm:grid-cols-3 gap-4">
@@ -231,13 +329,39 @@ export default function RegisterDriverPage() {
               </div>
             </Section>
 
+            {/* Syarat & Ketentuan */}
+            <Section title="Syarat & Ketentuan">
+              <p className="text-sm text-slate-600 -mt-1 mb-2">
+                Dengan mendaftar sebagai Mitra Driver KilatGo, Anda dianggap telah membaca, memahami, dan menyetujui seluruh poin di bawah ini:
+              </p>
+              <div className="max-h-72 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+                {DRIVER_TERMS.map((sec) => (
+                  <div key={sec.title}>
+                    <p className="text-sm font-bold text-kilatgo-900">{sec.title}</p>
+                    {sec.note && <p className="text-xs text-slate-500 mt-1">{sec.note}</p>}
+                    <ol className="mt-1.5 space-y-1 list-decimal list-inside text-sm text-slate-600 marker:text-kilatgo-400 marker:font-semibold">
+                      {sec.items.map((it, i) => <li key={i} className="pl-1">{it}</li>)}
+                    </ol>
+                  </div>
+                ))}
+              </div>
+              <label className="flex items-start gap-3 cursor-pointer mt-3 select-none">
+                <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)}
+                  className="mt-0.5 w-5 h-5 rounded border-slate-300 text-kilatgo-600 focus:ring-kilatgo-400 accent-kilatgo-600" />
+                <span className="text-sm text-slate-700">
+                  Saya telah membaca dan <span className="font-semibold">menyetujui seluruh Syarat &amp; Ketentuan</span> menjadi Mitra Driver KilatGo, termasuk{' '}
+                  <Link to="/kebijakan-privasi" target="_blank" className="font-semibold text-kilatgo-600 hover:underline">Kebijakan Privasi</Link>.
+                </span>
+              </label>
+            </Section>
+
             <button
               type="submit"
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-semibold text-kilatgo-950 bg-kilatgo-accent hover:bg-kilatgo-accent-dark transition active:scale-[0.99] disabled:opacity-60"
+              disabled={loading || !agreed}
+              className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-semibold text-kilatgo-950 bg-kilatgo-accent hover:bg-kilatgo-accent-dark transition active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-              {loading ? 'Mengirim...' : 'Kirim Pendaftaran'}
+              {loading ? 'Mengirim...' : 'Saya Setuju & Kirim Pendaftaran'}
             </button>
           </form>
         </div>

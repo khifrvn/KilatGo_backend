@@ -1,5 +1,42 @@
 @import "tailwindcss";
 
+/* Poppins self-hosted (latin subset) — tanpa Google Fonts CDN */
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/poppins-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/poppins-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/poppins-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/poppins-700.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('/fonts/poppins-800.woff2') format('woff2');
+}
+
 @theme {
   /* KilatGo Brand Colors */
   --color-kilatgo-950: #0a1f4d;
@@ -13,6 +50,10 @@
   --color-kilatgo-200: #b9d4fe;
   --color-kilatgo-100: #e0ecff;
   --color-kilatgo-50: #f0f6ff;
+
+  /* Cyan pada logo (ujung gradient huruf "Go") — dipakai untuk gradient brand. */
+  --color-kilatgo-cyan: #19b0f5;
+  --color-kilatgo-cyan-dark: #0b8ed0;
 
   --color-kilatgo-accent: #facc15;
   --color-kilatgo-accent-dark: #eab308;
@@ -86,4 +127,113 @@ body {
 ::selection {
   background-color: var(--color-kilatgo-200);
   color: var(--color-kilatgo-950);
+}
+
+/* ===== Landing: motion CSS-native (tanpa library animasi) =====
+   Reveal saat masuk viewport pakai scroll-driven animation. Browser yang belum
+   mendukung animation-timeline tetap menampilkan konten normal (progressive
+   enhancement lewat @supports), dan semuanya mati saat prefers-reduced-motion. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: reveal-up linear both;
+      animation-timeline: view();
+      animation-range: entry 5% cover 26%;
+    }
+    /* Jeda bertahap untuk item dalam satu grid (dipasang via style --i). */
+    .reveal-stagger > * {
+      animation: reveal-up linear both;
+      animation-timeline: view();
+      animation-range: entry 2% cover 30%;
+    }
+  }
+
+  /* Masuk halaman: hero muncul lembut, sekali jalan. */
+  .hero-in {
+    animation: reveal-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--i, 0) * 90ms);
+  }
+}
+
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== Layar Mode Perbaikan =====
+   Semua gerak CSS-native (tanpa library) dan mati saat prefers-reduced-motion. */
+.mnt-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000 30%, transparent 78%);
+}
+
+.mnt-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mnt-grid { animation: mnt-grid-pan 22s linear infinite; }
+  .mnt-blob { animation: mnt-drift 16s ease-in-out infinite alternate; }
+  .mnt-blob:nth-child(2) { animation-duration: 21s; animation-delay: -6s; }
+  .mnt-blob:nth-child(3) { animation-duration: 26s; animation-delay: -12s; }
+  .mnt-rock { animation: mnt-rock 3.6s ease-in-out infinite; transform-origin: 50% 55%; }
+  .mnt-ring { animation: mnt-ring 2.8s cubic-bezier(0.2, 0.6, 0.3, 1) infinite; }
+  .mnt-ring-2 { animation-delay: 1.4s; }
+  .mnt-bar::after { animation: mnt-bar 1.9s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+  .mnt-spin-hover:hover .mnt-spin { animation: mnt-spin 0.8s linear infinite; }
+  .mnt-eq > span { animation: mnt-eq 0.9s ease-in-out infinite; }
+  .mnt-eq > span:nth-child(2) { animation-delay: 0.15s; }
+  .mnt-eq > span:nth-child(3) { animation-delay: 0.3s; }
+}
+
+@keyframes mnt-eq {
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1); }
+}
+
+@keyframes mnt-grid-pan { to { background-position: 56px 56px; } }
+
+@keyframes mnt-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(6%, -7%, 0) scale(1.18); }
+}
+
+@keyframes mnt-rock {
+  0%, 100% { transform: rotate(-11deg); }
+  50% { transform: rotate(11deg); }
+}
+
+@keyframes mnt-ring {
+  from { transform: scale(0.85); opacity: 0.55; }
+  to { transform: scale(1.75); opacity: 0; }
+}
+
+@keyframes mnt-bar {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(320%); }
+}
+
+@keyframes mnt-spin { to { transform: rotate(360deg); } }
+
+/* Kilat halus pada garis bawah nav & pembatas brand. */
+.brand-rule {
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-kilatgo-cyan),
+    var(--color-kilatgo-accent),
+    transparent
+  );
 }

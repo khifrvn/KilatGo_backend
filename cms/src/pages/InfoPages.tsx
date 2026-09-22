@@ -3,7 +3,7 @@ import type { ComponentType } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Mail, Phone, MessageCircle, MapPin, ArrowLeft, ChevronDown,
-  HelpCircle, RefreshCw, FileText, Headset, Zap,
+  HelpCircle, RefreshCw, FileText, Headset, Zap, ShieldCheck, Car, Store,
 } from 'lucide-react';
 import { getPublicSettings } from '../api/admin';
 
@@ -75,6 +75,7 @@ function InfoLayout({ icon: Icon, eyebrow, title, subtitle, updated, children }:
             <Link to="/faq" className="hover:text-kilatgo-accent transition">FAQ</Link>
             <Link to="/refund-policy" className="hover:text-kilatgo-accent transition">Kebijakan Refund</Link>
             <Link to="/syarat-ketentuan" className="hover:text-kilatgo-accent transition">Syarat &amp; Ketentuan</Link>
+            <Link to="/kebijakan-privasi" className="hover:text-kilatgo-accent transition">Kebijakan Privasi</Link>
             <Link to="/kontak" className="hover:text-kilatgo-accent transition">Kontak</Link>
           </nav>
         </div>
@@ -167,6 +168,98 @@ export function TermsPage() {
         { h: 'Batasan Tanggung Jawab', body: ['KilatGo berupaya menyediakan layanan terbaik, namun tidak bertanggung jawab atas kerugian yang timbul di luar kendali wajar, termasuk keterlambatan akibat kondisi lalu lintas atau cuaca.'] },
         { h: 'Perubahan Ketentuan', body: ['KilatGo dapat memperbarui syarat dan ketentuan ini sewaktu-waktu. Perubahan berlaku sejak dipublikasikan pada halaman ini.'] },
       ]} />
+    </InfoLayout>
+  );
+}
+
+// ===== Kebijakan Privasi (Mitra Driver & Merchant) =====
+const PRIVACY_DATA = {
+  driver: ['Nama, NIK, Alamat, No HP', 'Foto KTP, Selfie + KTP, SIM, STNK', 'Data kendaraan, No rekening', 'Lokasi, riwayat order, rating'],
+  merchant: ['Nama pemilik, No HP, Alamat usaha', 'Foto KTP, NPWP/Surat Usaha', 'Data menu, harga, foto produk', 'Riwayat penjualan, No rekening'],
+};
+
+export function PrivacyPage() {
+  return (
+    <InfoLayout icon={ShieldCheck} eyebrow="Legal" title="Kebijakan Privasi" updated="Juli 2026"
+      subtitle="Berlaku untuk Mitra Driver & Mitra Merchant. KilatGo menghargai dan melindungi Data Pribadi Anda — kebijakan ini dibuat sesuai UU No. 27 Tahun 2022 tentang Perlindungan Data Pribadi.">
+      {/* 1. Data yang dikumpulkan — perbandingan dua kolom */}
+      <section className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm mb-4">
+        <div className="flex gap-4">
+          <span className="shrink-0 w-9 h-9 rounded-xl bg-kilatgo-50 text-kilatgo-600 font-bold flex items-center justify-center">1</span>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-semibold mb-4">Data yang Kami Kumpulkan</h2>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="flex items-center gap-2 font-semibold text-kilatgo-900 mb-3"><Car className="w-4 h-4 text-kilatgo-500" />Untuk Mitra Driver</p>
+                <ul className="space-y-2 text-sm text-slate-600">
+                  {PRIVACY_DATA.driver.map((d, i) => <li key={i} className="flex gap-2"><span className="text-kilatgo-400 mt-0.5">•</span>{d}</li>)}
+                </ul>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="flex items-center gap-2 font-semibold text-kilatgo-900 mb-3"><Store className="w-4 h-4 text-kilatgo-500" />Untuk Mitra Merchant</p>
+                <ul className="space-y-2 text-sm text-slate-600">
+                  {PRIVACY_DATA.merchant.map((d, i) => <li key={i} className="flex gap-2"><span className="text-kilatgo-400 mt-0.5">•</span>{d}</li>)}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 2 dst — kartu bernomor mengikuti Article, dilanjut dari nomor 2 */}
+      <div className="space-y-4">
+        {[
+          {
+            h: 'Tujuan Penggunaan Data', body: [
+              'Data Anda kami gunakan hanya untuk:',
+              '1. Verifikasi & KYC — memastikan identitas mitra valid.',
+              '2. Operasional aplikasi — proses order, pembayaran, dan pencairan dana.',
+              '3. Keamanan & pencegahan fraud — vermuk, deteksi akun ganda.',
+              '4. Pelayanan & bantuan — CS, pengaduan, dan info promo.',
+              '5. Kewajiban hukum — jika diminta aparat penegak hukum.',
+            ],
+          },
+          {
+            h: 'Keamanan & Penyimpanan Data', body: [
+              '1. Data disimpan di server terenkripsi dan hanya bisa diakses Tim Resmi KilatGo.',
+              '2. Data tidak akan kami jual, sewa, atau bagikan ke pihak ketiga tanpa izin Anda.',
+              '3. Data disimpan selama Anda menjadi mitra. Jika berhenti, data dihapus dalam 90 hari secara otomatis oleh sistem.',
+            ],
+          },
+          {
+            h: 'Hak Anda sebagai Pemilik Data', body: [
+              'Sesuai UU PDP, Anda berhak:',
+              '1. Akses — melihat data yang kami simpan.',
+              '2. Koreksi — meminta perbaikan jika data salah.',
+              '3. Hapus — meminta penghapusan data saat berhenti jadi mitra.',
+              '4. Tarik izin — berhenti memberikan izin penggunaan data.',
+              'Untuk mengajukan permintaan, hubungi CS Resmi KilatGo.',
+            ],
+          },
+          {
+            h: 'Perubahan Kebijakan', body: [
+              'KilatGo dapat mengubah kebijakan ini sewaktu-waktu tanpa pemberitahuan terlebih dahulu. Perubahan berlaku sejak dipublikasikan pada halaman ini.',
+            ],
+          },
+          {
+            h: 'Persetujuan', body: [
+              'Dengan mendaftar dan menggunakan aplikasi KilatGo, Anda menyatakan telah membaca dan menyetujui Kebijakan Privasi ini.',
+            ],
+          },
+        ].map((s, i) => (
+          <section key={i} className="flex gap-4 p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm">
+            <span className="shrink-0 w-9 h-9 rounded-xl bg-kilatgo-50 text-kilatgo-600 font-bold flex items-center justify-center">{i + 2}</span>
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold mb-2">{s.h}</h2>
+              {s.body.map((p, j) => (
+                <p key={j} className="text-slate-600 leading-relaxed mb-2 last:mb-0">{p}</p>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+
+      <p className="text-center text-sm text-slate-400 mt-8">PT. TEKNOLOGI NUSANTARA DIGITAL — Stabat, Sumatera Utara</p>
     </InfoLayout>
   );
 }

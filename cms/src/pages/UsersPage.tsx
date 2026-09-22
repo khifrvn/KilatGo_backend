@@ -1,7 +1,30 @@
 import { useEffect, useState } from 'react';
-import { Search, UserX, UserCheck, Users, Filter } from 'lucide-react';
+import { Search, UserX, UserCheck, Users, Eye, Wallet, Star, Mail, Phone, Calendar, X } from 'lucide-react';
 import { getAllUsers, suspendUser, activateUser } from '../api/admin';
+import { IMAGE_BASE } from '../api/client';
 import type { User } from '../types';
+
+const avatarUrl = (a?: string | null) => (a ? `${IMAGE_BASE}avatars/${a}` : null);
+const rp = (v?: number | string | null) => 'Rp ' + Number(v ?? 0).toLocaleString('id-ID');
+const fmtDate = (s: string) =>
+  new Date(s).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+
+// Avatar bulat: foto bila ada, else inisial nama.
+const UserAvatar = ({ name, avatar, size = 40 }: { name: string; avatar?: string | null; size?: number }) => {
+  const url = avatarUrl(avatar);
+  return (
+    <div
+      className="rounded-full bg-kilatgo-100 flex items-center justify-center text-kilatgo-700 font-semibold text-sm flex-shrink-0 overflow-hidden"
+      style={{ width: size, height: size }}
+    >
+      {url ? (
+        <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+      ) : (
+        name.charAt(0).toUpperCase()
+      )}
+    </div>
+  );
+};
 
 const roleColors: Record<string, string> = {
   ADMIN: 'bg-purple-100 text-purple-700 ring-purple-200',
@@ -27,16 +50,16 @@ export default function UsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string>('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [detail, setDetail] = useState<User | null>(null);
 
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
-      const data = await getAllUsers(roleFilter || undefined);
+      const data = await getAllUsers('CUSTOMER'); // halaman ini khusus customer
       setUsers(data);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load users');
+      setError(err.response?.data?.message || 'Gagal memuat pengguna');
     } finally {
       setIsLoading(false);
     }
@@ -44,16 +67,17 @@ export default function UsersPage() {
 
   useEffect(() => {
     fetchUsers();
-  }, [roleFilter]);
+  }, []);
 
   const handleSuspend = async (userId: string) => {
-    if (!confirm('Are you sure you want to suspend this user?')) return;
+    const reason = window.prompt('Alasan blokir (ditampilkan ke pengguna di aplikasi):', '');
+    if (reason === null) return; // batal
     try {
       setActionLoading(userId);
-      await suspendUser(userId);
+      await suspendUser(userId, reason.trim() || undefined);
       await fetchUsers();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to suspend user');
+      setError(err.response?.data?.message || 'Gagal memblokir pengguna');
     } finally {
       setActionLoading(null);
     }
@@ -65,7 +89,7 @@ export default function UsersPage() {
       await activateUser(userId);
       await fetchUsers();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to activate user');
+      setError(err.response?.data?.message || 'Gagal mengaktifkan pengguna');
     } finally {
       setActionLoading(null);
     }
@@ -84,9 +108,9 @@ export default function UsersPage() {
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <p className="text-sm font-medium text-kilatgo-500 uppercase tracking-wider mb-1">
-            Management
+            Manajemen
           </p>
-          <h1 className="text-3xl font-bold text-kilatgo-950">Users</h1>
+          <h1 className="text-3xl font-bold text-kilatgo-950">Pelanggan</h1>
         </div>
       </div>
 
@@ -96,24 +120,11 @@ export default function UsersPage() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by name, email, or phone"
+            placeholder="Cari nama, email, atau telepon"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-kilatgo-400 focus:border-kilatgo-400 outline-none transition"
           />
-        </div>
-        <div className="relative">
-          <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="pl-10 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-kilatgo-400 focus:border-kilatgo-400 outline-none appearance-none min-w-[160px]"
-          >
-            <option value="">All Roles</option>
-            <option value="CUSTOMER">Customer</option>
-            <option value="DRIVER">Driver</option>
-            <option value="ADMIN">Admin</option>
-          </select>
         </div>
       </div>
 
@@ -134,7 +145,7 @@ export default function UsersPage() {
             <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
               <Users className="w-8 h-8 text-slate-400" />
             </div>
-            <p className="text-sm font-medium">No users found</p>
+            <p className="text-sm font-medium">Tidak ada pengguna</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -142,19 +153,22 @@ export default function UsersPage() {
               <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
                   <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    User
+                    Pengguna
                   </th>
                   <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    Role
+                    Peran
+                  </th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    Saldo
                   </th>
                   <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     Status
                   </th>
                   <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    Joined
+                    Bergabung
                   </th>
                   <th className="text-right px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    Actions
+                    Aksi
                   </th>
                 </tr>
               </thead>
@@ -163,9 +177,7 @@ export default function UsersPage() {
                   <tr key={user.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-kilatgo-100 flex items-center justify-center text-kilatgo-700 font-semibold text-sm">
-                          {user.name.charAt(0).toUpperCase()}
-                        </div>
+                        <UserAvatar name={user.name} avatar={user.avatar} />
                         <div>
                           <p className="font-semibold text-sm text-kilatgo-950">{user.name}</p>
                           <p className="text-sm text-slate-500">{user.email}</p>
@@ -177,6 +189,9 @@ export default function UsersPage() {
                       <Badge color={roleColors[user.role] || 'bg-slate-100 text-slate-700 ring-slate-200'}>
                         {user.role}
                       </Badge>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-semibold text-kilatgo-950">
+                      {rp(user.customer?.balance)}
                     </td>
                     <td className="px-6 py-4">
                       <Badge color={statusColors[user.status] || 'bg-slate-100 text-slate-700 ring-slate-200'}>
@@ -191,6 +206,14 @@ export default function UsersPage() {
                       })}
                     </td>
                     <td className="px-6 py-4 text-right">
+                      <div className="inline-flex items-center gap-2">
+                        <button
+                          onClick={() => setDetail(user)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-kilatgo-700 bg-kilatgo-50 hover:bg-kilatgo-100 rounded-lg transition"
+                        >
+                          <Eye className="w-4 h-4" />
+                          Detail
+                        </button>
                       {user.status === 'SUSPENDED' ? (
                         <button
                           onClick={() => handleActivate(user.id)}
@@ -198,7 +221,7 @@ export default function UsersPage() {
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition disabled:opacity-50"
                         >
                           <UserCheck className="w-4 h-4" />
-                          Activate
+                          Aktifkan
                         </button>
                       ) : (
                         <button
@@ -207,9 +230,10 @@ export default function UsersPage() {
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition disabled:opacity-50"
                         >
                           <UserX className="w-4 h-4" />
-                          Suspend
+                          Blokir
                         </button>
                       )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -218,6 +242,58 @@ export default function UsersPage() {
           </div>
         )}
       </div>
+
+      {/* Detail modal */}
+      {detail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setDetail(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <h3 className="text-lg font-bold text-kilatgo-950">Detail Pelanggan</h3>
+              <button onClick={() => setDetail(null)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-5">
+                <UserAvatar name={detail.name} avatar={detail.avatar} size={64} />
+                <div className="min-w-0">
+                  <p className="text-lg font-bold text-kilatgo-950 truncate">{detail.name}</p>
+                  <div className="mt-1">
+                    <Badge color={statusColors[detail.status] || 'bg-slate-100 text-slate-700 ring-slate-200'}>{detail.status}</Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Saldo highlight */}
+              <div className="rounded-xl bg-gradient-to-br from-kilatgo-500 to-kilatgo-700 text-white p-4 mb-5">
+                <div className="flex items-center gap-2 text-white/80 text-xs font-medium">
+                  <Wallet className="w-4 h-4" /> Saldo KilatGo
+                </div>
+                <p className="text-2xl font-extrabold mt-1">{rp(detail.customer?.balance)}</p>
+              </div>
+
+              <div className="space-y-3">
+                <DetailRow icon={Mail} label="Email" value={detail.email} />
+                <DetailRow icon={Phone} label="Telepon" value={detail.phone} />
+                <DetailRow icon={Star} label="Rating" value={`${Number(detail.customer?.rating ?? 5).toFixed(1)} (${detail.customer?.totalRatings ?? 0} penilaian)`} />
+                <DetailRow icon={Calendar} label="Bergabung" value={fmtDate(detail.createdAt)} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+const DetailRow = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) => (
+  <div className="flex items-center gap-3">
+    <div className="w-9 h-9 rounded-lg bg-slate-50 flex items-center justify-center text-slate-500 flex-shrink-0">
+      <Icon className="w-4 h-4" />
+    </div>
+    <div className="min-w-0">
+      <p className="text-xs text-slate-400">{label}</p>
+      <p className="text-sm font-semibold text-kilatgo-950 truncate">{value}</p>
+    </div>
+  </div>
+);

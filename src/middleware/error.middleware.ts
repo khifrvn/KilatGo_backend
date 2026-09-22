@@ -6,10 +6,12 @@ import { logError } from '../services/errorlog.service';
 
 export class AppError extends Error {
   statusCode: number;
+  data?: unknown; // payload tambahan (mis. detail suspend) → masuk field `errors` respons
 
-  constructor(message: string, statusCode: number = 500) {
+  constructor(message: string, statusCode: number = 500, data?: unknown) {
     super(message);
     this.statusCode = statusCode;
+    this.data = data;
     this.name = 'AppError';
   }
 }
@@ -33,7 +35,7 @@ export function errorHandler(
 ): Response {
   if (err instanceof AppError) {
     if (err.statusCode >= 500) record(err, req, err.statusCode);
-    return errorResponse(res, err.message, err.statusCode);
+    return errorResponse(res, err.message, err.statusCode, err.data);
   }
 
   if (err instanceof ZodError) {

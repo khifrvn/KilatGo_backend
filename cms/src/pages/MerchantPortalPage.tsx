@@ -50,7 +50,7 @@ export default function MerchantPortalPage() {
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-kilatgo-accent flex items-center justify-center"><Store className="w-5 h-5 text-kilatgo-950" /></div>
             <div>
-              <p className="font-bold leading-tight">{merchant?.businessName || 'Merchant'}</p>
+              <p className="font-bold leading-tight">{merchant?.businessName || 'Mitra'}</p>
               <p className="text-xs text-kilatgo-300">{user?.email}</p>
             </div>
           </div>
@@ -69,7 +69,7 @@ export default function MerchantPortalPage() {
               {merchant.isApproved ? <CheckCircle2 className="w-6 h-6" /> : <Clock className="w-6 h-6" />}
               <div>
                 <p className="font-semibold">{merchant.isApproved ? 'Usaha aktif' : 'Menunggu verifikasi admin'}</p>
-                <p className="text-sm opacity-80">{merchant.isApproved ? 'Menu kamu tampil ke pelanggan.' : 'Kamu tetap bisa menyiapkan menu selagi menunggu approval.'}</p>
+                <p className="text-sm opacity-80">{merchant.isApproved ? 'Menu kamu tampil ke pelanggan.' : 'Kamu tetap bisa menyiapkan menu selagi menunggu persetujuan.'}</p>
               </div>
             </div>
 

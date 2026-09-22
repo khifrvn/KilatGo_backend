@@ -48,6 +48,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  // Auto-logout setelah 30 menit tanpa aktivitas (mouse/keyboard/scroll/touch).
+  useEffect(() => {
+    if (!token) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const reset = () => {
+      clearTimeout(timer);
+      timer = setTimeout(logout, 30 * 60 * 1000);
+    };
+    const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach((e) => window.addEventListener(e, reset, { passive: true }));
+    reset();
+    return () => {
+      clearTimeout(timer);
+      events.forEach((e) => window.removeEventListener(e, reset));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
   const value: AuthContextType = {
     user,
     token,

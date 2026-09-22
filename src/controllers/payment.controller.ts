@@ -18,6 +18,26 @@ export async function processPayment(
   }
 }
 
+// Bayar order via iPaymu → kembalikan URL pembayaran.
+export async function payOrderIpaymu(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const data = await paymentService.payOrderIpaymu(req.user!.userId, req.params.orderId);
+    successResponse(res, 'Payment link created', data, 201);
+  } catch (error) {
+    next(error);
+  }
+}
+
+// Callback notify dari iPaymu (publik).
+export async function ipaymuCallback(req: Request, res: Response): Promise<void> {
+  try {
+    await paymentService.handleIpaymuCallback(req.body || {});
+  } catch (e) {
+    console.error('payment callback error', e);
+  }
+  res.json({ received: true });
+}
+
 export async function getPayment(
   req: Request,
   res: Response,

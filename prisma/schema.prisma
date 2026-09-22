@@ -17,6 +17,7 @@ enum UserRole {
 enum KycSubject {
   DRIVER
   MERCHANT
+  CUSTOMER
 }
 
 enum AttendanceStatus {
@@ -51,6 +52,73 @@ enum DriverStatus {
 enum ServiceType {
   RIDE
   CAR
+  SEND
+  FOOD
+}
+
+enum WalletKind {
+  CREDIT
+  EARNINGS
+}
+
+// Ledger transaksi dompet — audit trail (top up, komisi, pendapatan order, penarikan).
+model WalletTransaction {
+  id           String     @id @default(uuid())
+  driverId     String     @map("driver_id")
+  driver       Driver     @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  wallet       WalletKind
+  type         String     // TOPUP | COMMISSION | ORDER_EARNING | WITHDRAWAL | ADJUSTMENT
+  amount       Decimal    @db.Decimal(12, 2) // + masuk, - keluar
+  balanceAfter Decimal    @db.Decimal(12, 2) @map("balance_after")
+  note         String?
+  ref          String?    // orderId / withdrawalId / payment ref
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  @@index([driverId, wallet])
+  @@map("wallet_transactions")
+}
+
+// Top up Dompet Kredit via iPaymu.
+model TopUp {
+  id              String    @id @default(uuid())
+  driverId        String?   @map("driver_id")
+  driver          Driver?   @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  customerId      String?   @map("customer_id")
+  customer        Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  merchantId      String?   @map("merchant_id")
+  merchant        Merchant? @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  amount          Decimal   @db.Decimal(12, 2)
+  status          String    @default("PENDING") // PENDING | PAID | FAILED | EXPIRED
+  note            String?   // catatan admin untuk isi saldo manual
+  referenceId     String    @unique @map("reference_id")
+  ipaymuSessionId String?   @map("ipaymu_session_id")
+  ipaymuTrxId     String?   @map("ipaymu_trx_id")
+  paymentUrl      String?   @db.Text @map("payment_url")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  paidAt          DateTime? @map("paid_at")
+
+  @@map("topups")
+}
+
+// Penarikan saldo Dompet Pendapatan ke rekening driver.
+model Withdrawal {
+  id              String    @id @default(uuid())
+  driverId        String    @map("driver_id")
+  driver          Driver    @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  amount          Decimal   @db.Decimal(12, 2) // dipotong dari earnings
+  adminFee        Decimal   @db.Decimal(12, 2) @map("admin_fee")
+  netAmount       Decimal   @db.Decimal(12, 2) @map("net_amount") // yang ditransfer
+  bankName        String    @map("bank_name")
+  bankAccount     String    @map("bank_account")
+  bankHolder      String    @map("bank_holder")
+  status          String    @default("PENDING") // PENDING | PROCESSING | COMPLETED | REJECTED
+  rejectionReason String?   @db.Text @map("rejection_reason")
+  referenceNumber String?   @map("reference_number") // no. ref transfer (diisi admin)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  processedAt     DateTime? @map("processed_at")
+
+  @@index([driverId])
+  @@map("withdrawals")
 }
 
 enum KycStatus {
@@ -62,6 +130,7 @@ enum KycStatus {
 
 enum OrderStatus {
   PENDING
+  MERCHANT_ACCEPTED // FOOD: merchant terima, akan cari driver
   ACCEPTED
   DRIVER_ARRIVED
   ON_RIDE
@@ -81,6 +150,7 @@ enum PaymentMethod {
   EWALLET
   BANK_TRANSFER
   CARD
+  BALANCE
 }
 
 model User {
@@ -89,8 +159,11 @@ model User {
   password  String
   phone     String     @unique
   name      String
+  avatar    String?    // foto profil (file publik di uploads/avatars)
+  fcmToken  String?    @db.Text @map("fcm_token") // token FCM push (customer)
   role      UserRole
   status    UserStatus @default(PENDING)
+  suspendReason String? @db.Text @map("suspend_reason") // alasan blokir (ditampilkan ke pengguna)
   createdAt DateTime   @default(now()) @map("created_at")
   updatedAt DateTime   @updatedAt @map("updated_at")
 
@@ -107,14 +180,139 @@ model Customer {
   id         String   @id @default(uuid())
   userId     String   @unique @map("user_id")
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  rating     Float    @default(5.0)
-  totalRides Int      @default(0) @map("total_rides")
+  address    String?  @db.Text // alamat domisili — wajib diisi sebelum bisa memesan layanan
+  balance    Decimal  @default(0) @db.Decimal(12, 2) // Saldo KilatGo (top-up via iPaymu)
+  rating       Float  @default(5.0)
+  totalRatings Int    @default(0) @map("total_ratings") // jumlah penilaian dari driver
+  totalRides   Int    @default(0) @map("total_rides")
+
+  // KYC pelanggan (syarat tarik saldo): upload KTP + selfie KTP, diverifikasi admin.
+  ktpPhoto    String?   @map("ktp_photo")    // file privat
+  selfiePhoto String?   @map("selfie_photo") // file privat (selfie pegang KTP)
+  kycStatus   KycStatus @default(UNVERIFIED) @map("kyc_status")
+  // Rekening tujuan penarikan & PIN
+  bankName    String?   @map("bank_name")
+  bankAccount String?   @map("bank_account")
+  bankHolder  String?   @map("bank_holder")
+  withdrawPin String?   @map("withdraw_pin") // PIN penarikan (hashed)
+
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
   orders Order[]
+  topups TopUp[]
+  voucherRedemptions VoucherRedemption[]
+  withdrawals CustomerWithdrawal[]
+  ppobTransactions PpobTransaction[]
 
   @@map("customers")
+}
+
+// Pembelian PPOB (pulsa, paket data, token PLN, e-wallet, voucher game) via Digiflazz.
+// Dibayar dari saldo KilatGo; saldo dikembalikan otomatis bila vendor menyatakan Gagal.
+model PpobTransaction {
+  id          String   @id @default(uuid())
+  // Pemilik transaksi: pelanggan ATAU driver, tepat satu yang terisi. Pelanggan
+  // membayar dari saldo KilatGo, driver dari Dompet Pendapatan (earnings).
+  customerId  String?   @map("customer_id")
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  driverId    String?   @map("driver_id")
+  driver      Driver?   @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  merchantId  String?   @map("merchant_id")
+  merchant    Merchant? @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  // Dompet driver yang dipotong (EARNINGS | CREDIT). Wajib dicatat supaya refund
+  // kembali ke dompet yang sama. null untuk pelanggan & mitra (dompetnya tunggal).
+  wallet      WalletKind?
+  refId       String   @unique @map("ref_id") // ref_id yang dikirim ke Digiflazz
+  sku         String // buyer_sku_code
+  productName String   @map("product_name")
+  category    String?
+  brand       String?
+  customerNo  String   @map("customer_no") // no. HP / ID pelanggan / no. meter
+  costPrice   Decimal  @db.Decimal(12, 2) @map("cost_price") // harga vendor
+  sellPrice   Decimal  @db.Decimal(12, 2) @map("sell_price") // dibayar pelanggan (sudah markup)
+  status      String   @default("PENDING") // PENDING | SUCCESS | FAILED
+  rc          String? // response code Digiflazz
+  message     String?  @db.Text
+  sn          String?  @db.Text // serial number / token PLN
+  refunded    Boolean  @default(false) // saldo sudah dikembalikan
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([customerId, status])
+  @@index([driverId, status])
+  @@index([merchantId, status])
+  @@map("ppob_transactions")
+}
+
+// Penarikan saldo KilatGo pelanggan (butuh KYC VERIFIED). Mirror penarikan driver.
+model CustomerWithdrawal {
+  id              String    @id @default(uuid())
+  customerId      String    @map("customer_id")
+  customer        Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  amount          Decimal   @db.Decimal(12, 2)
+  adminFee        Decimal   @db.Decimal(12, 2) @map("admin_fee")
+  netAmount       Decimal   @db.Decimal(12, 2) @map("net_amount")
+  bankName        String    @map("bank_name")
+  bankAccount     String    @map("bank_account")
+  bankHolder      String    @map("bank_holder")
+  status          String    @default("PENDING") // PENDING | PROCESSING | COMPLETED | REJECTED
+  rejectionReason String?   @db.Text @map("rejection_reason")
+  referenceNumber String?   @map("reference_number")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  processedAt     DateTime? @map("processed_at")
+
+  @@index([customerId])
+  @@map("customer_withdrawals")
+}
+
+enum VoucherDiscountType {
+  PERCENT      // diskon persen + batas maks
+  FIXED        // potongan tetap (Rp)
+  FREE_ONGKIR  // gratis ongkir sampai batas (Food & Send)
+}
+
+// Voucher/kupon yang dipakai user saat checkout (dikelola admin).
+model Voucher {
+  id           String   @id @default(uuid())
+  code         String   @unique // huruf besar, mis. KILATFOOD50
+  title        String
+  description  String?  @db.Text
+  discountType VoucherDiscountType @map("discount_type")
+  value        Decimal  @db.Decimal(12, 2) // PERCENT: 0-100; FIXED: rupiah; FREE_ONGKIR: batas ongkir (0=penuh)
+  maxDiscount  Decimal? @db.Decimal(12, 2) @map("max_discount") // batas potongan utk PERCENT
+  minSpend     Decimal  @default(0) @db.Decimal(12, 2) @map("min_spend")
+  services     String   @db.Text // JSON array: ["RIDE","CAR","SEND","FOOD"]
+  startAt      DateTime @map("start_at")
+  endAt        DateTime @map("end_at")
+  totalQuota   Int?     @map("total_quota") // null = tak terbatas
+  usedCount    Int      @default(0) @map("used_count")
+  perUserLimit Int      @default(1) @map("per_user_limit")
+  newUserOnly  Boolean  @default(false) @map("new_user_only")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  redemptions VoucherRedemption[]
+
+  @@map("vouchers")
+}
+
+// Catatan pemakaian voucher (untuk kuota total & batas per-user).
+model VoucherRedemption {
+  id          String   @id @default(uuid())
+  voucherId   String   @map("voucher_id")
+  voucher     Voucher  @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  customerId  String   @map("customer_id")
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  orderId     String?  @map("order_id")
+  amount      Decimal  @db.Decimal(12, 2) // potongan yang diberikan
+  serviceType String   @map("service_type")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([voucherId])
+  @@index([customerId])
+  @@map("voucher_redemptions")
 }
 
 model Driver {
@@ -128,6 +326,15 @@ model Driver {
   address       String?       @db.Text @map("address")
   city          String?       @map("city")
   serviceType   ServiceType   @default(RIDE) @map("service_type")
+  enabledServices String?     @map("enabled_services") // CSV layanan aktif (RIDE,SEND,FOOD,CAR). null = pakai serviceType saja.
+  fcmToken       String?      @db.Text @map("fcm_token") // token FCM untuk push notifikasi
+  creditBalance   Decimal      @default(0) @db.Decimal(12, 2) @map("credit_balance")   // Dompet Kredit (deposit komisi, tidak bisa ditarik)
+  earningsBalance Decimal      @default(0) @db.Decimal(12, 2) @map("earnings_balance") // Dompet Driver (pendapatan, bisa ditarik)
+  withdrawPin     String?      @map("withdraw_pin") // PIN penarikan (hashed)
+  walletTransactions WalletTransaction[]
+  ppobTransactions   PpobTransaction[]
+  topups          TopUp[]
+  withdrawals     Withdrawal[]
 
   // SIM
   simType       String?       @map("sim_type")
@@ -173,6 +380,7 @@ model Driver {
   orders          Order[]
   trackingHistory Tracking[]
   attendances     Attendance[]
+  packageOrders   DriverPackageOrder[]
 
   @@map("drivers")
 }
@@ -185,6 +393,8 @@ model Merchant {
 
   businessName String  @map("business_name")
   category     String?
+  description  String? @db.Text // deskripsi restoran (KilatFood)
+  logo         String? // nama file logo publik
   ownerName    String  @map("owner_name")
   nik          String?
   phone        String?
@@ -192,7 +402,11 @@ model Merchant {
   city         String?
   latitude     Float?
   longitude    Float?
+  rating       Float   @default(5.0) // rata-rata rating dari customer (KilatFood)
+  totalRatings Int     @default(0) @map("total_ratings")
   operatingHours String? @map("operating_hours")
+  // Jadwal mingguan: { mon:{open,close,closed}, ... sun:{...} }
+  operatingSchedule Json? @map("operating_schedule")
 
   // Legalitas & rekening
   npwp        String?
@@ -201,6 +415,7 @@ model Merchant {
   bankName    String? @map("bank_name")
   bankAccount String? @map("bank_account")
   bankHolder  String? @map("bank_holder")
+  withdrawPin String? @map("withdraw_pin") // PIN penarikan (hashed)
 
   // Dokumen (path privat) & KYC
   ktpPhoto    String?   @map("ktp_photo")
@@ -208,13 +423,53 @@ model Merchant {
   npwpPhoto   String?   @map("npwp_photo")
   kycStatus   KycStatus @default(UNVERIFIED) @map("kyc_status")
   isApproved  Boolean   @default(false) @map("is_approved")
+  isOpen      Boolean   @default(true) @map("is_open") // buka/tutup toko
+  fcmToken    String?   @db.Text @map("fcm_token")     // push notif order baru
+  balance     Decimal   @default(0) @db.Decimal(12, 2) // saldo bisa ditarik
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  menus MerchantMenu[]
+  menus       MerchantMenu[]
+  categories  MerchantCategory[]
+  orders      Order[]
+  withdrawals MerchantWithdrawal[]
+  topups      TopUp[]
+  promotions  MerchantPromotion[]
+  ppobTransactions PpobTransaction[]
 
   @@map("merchants")
+}
+
+// Promosi berbayar mitra ("Promosikan Jualan kamu"): mitra beli paket durasi pakai
+// saldo, warungnya tampil paling atas di beranda KilatFood sampai endsAt.
+// Paket (nama/durasi/harga) dikelola admin di Setting `merchant_promo_packages`.
+model MerchantPromotion {
+  id          String   @id @default(uuid())
+  merchantId  String   @map("merchant_id")
+  merchant    Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  packageName String   @map("package_name") // snapshot nama paket saat dibeli
+  minutes     Int                            // durasi paket (menit)
+  price       Decimal  @db.Decimal(12, 2)    // yang dipotong dari saldo mitra
+  endsAt      DateTime @map("ends_at")       // promosi aktif selama now < endsAt
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([merchantId])
+  @@index([endsAt])
+  @@map("merchant_promotions")
+}
+
+model MerchantCategory {
+  id         String   @id @default(uuid())
+  merchantId String   @map("merchant_id")
+  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  name       String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([merchantId])
+  @@map("merchant_categories")
 }
 
 model MerchantMenu {
@@ -228,6 +483,7 @@ model MerchantMenu {
   category    String?
   photo       String?
   isAvailable Boolean @default(true) @map("is_available")
+  stock       Int?    // null = stok tak terbatas
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -304,11 +560,13 @@ model Complaint {
 }
 
 model Admin {
-  id        String   @id @default(uuid())
-  userId    String   @unique @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(uuid())
+  userId       String   @unique @map("user_id")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isSuperAdmin Boolean  @default(false) @map("is_super_admin") // kendali penuh + kelola admin lain
+  permissions  String?  @db.Text // JSON array key menu yang diizinkan (null = tak ada; diabaikan bila superadmin)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@map("admins")
 }
@@ -323,6 +581,11 @@ model Order {
   driverId        String?       @map("driver_id")
   driver          Driver?       @relation(fields: [driverId], references: [id])
 
+  // FOOD: warung tujuan + item pesanan. null utk RIDE/CAR/SEND.
+  merchantId      String?       @map("merchant_id")
+  merchant        Merchant?     @relation(fields: [merchantId], references: [id])
+  items           OrderItem[]
+
   pickupLat       Float         @map("pickup_lat")
   pickupLng       Float         @map("pickup_lng")
   pickupAddress   String        @map("pickup_address") @db.Text
@@ -336,27 +599,137 @@ model Order {
 
   distanceKm      Float         @map("distance_km")
   baseFare        Decimal       @map("base_fare") @db.Decimal(10, 2)
+  serviceFee      Decimal       @default(0) @map("service_fee") @db.Decimal(10, 2) // biaya layanan (milik platform)
   discount        Decimal       @default(0) @db.Decimal(10, 2)
   voucherCode     String?       @map("voucher_code")
   totalFare       Decimal       @map("total_fare") @db.Decimal(10, 2)
 
   paymentMethod   PaymentMethod @default(CASH) @map("payment_method")
 
+  itemsTotal      Decimal?      @map("items_total") @db.Decimal(10, 2) // subtotal makanan (FOOD)
+  pickupCode      String?       @map("pickup_code")                     // kode yg diberi merchant ke driver
+  pickupPhoto     String?       @map("pickup_photo")                    // SEND: foto barang saat dijemput
+  proofPhoto      String?       @map("proof_photo")                     // bukti foto sampai ke customer
+  signaturePhoto  String?       @map("signature_photo")                 // SEND: tanda tangan penerima (gambar bukti terima)
+  packageType     String?       @map("package_type")                    // SEND: DOCUMENT|SMALL|MEDIUM|LARGE
+  packageContents String?       @map("package_contents") @db.Text        // SEND: isi paket (opsional; disembunyikan customer utk barang berharga)
+  recipientName   String?       @map("recipient_name")                   // SEND: nama penerima paket
+  recipientPhone  String?       @map("recipient_phone")                  // SEND: no telp penerima (WhatsApp)
+
   notes           String?       @db.Text
+
+  // Order manual (dibuat admin utk pelanggan yg order via WA, bukan dari app).
+  isManual            Boolean  @default(false) @map("is_manual")
+  manualCustomerName  String?  @map("manual_customer_name")  // nama pelanggan (bila tak dikaitkan akun)
+  manualCustomerPhone String?  @map("manual_customer_phone") // no HP pelanggan
+  manualItems         String?  @db.Text @map("manual_items")  // "Pesanan pelanggan" (deskripsi barang/makanan)
+  itemsKnown          Boolean  @default(true) @map("items_known") // false = harga pesanan belum diketahui
+  paymentUrl          String?  @db.Text @map("payment_url")    // link bayar gateway (di-share ke WA pelanggan)
+  paymentRef          String?  @map("payment_ref")             // referenceId iPaymu
+
+  // Boost pencarian driver: pelanggan/mitra klik → radius dispatch +2km per klik, aktif sementara.
+  boostKm        Int       @default(0) @map("boost_km")             // total tambahan km dari boost
+  boostExpiresAt DateTime? @map("boost_expires_at")                 // boost aktif selama < waktu ini
 
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
+  acceptedAt      DateTime?     @map("accepted_at")                    // saat driver menerima order
+  driverAcceptLat Float?        @map("driver_accept_lat")              // posisi driver saat menerima (cek "driver jalan?")
+  driverAcceptLng Float?        @map("driver_accept_lng")
   completedAt     DateTime?     @map("completed_at")
   cancelledAt     DateTime?     @map("cancelled_at")
   cancellationReason String?    @map("cancellation_reason") @db.Text
 
   payment      Payment?
   trackingLogs Tracking[]
+  ratings      Rating[]
+  messages     Message[]
 
   @@index([customerId])
   @@index([driverId])
+  @@index([merchantId])
   @@index([status])
   @@map("orders")
+}
+
+// Rating dua arah per order: customer→driver & driver→customer.
+model Rating {
+  id        String   @id @default(uuid())
+  orderId   String   @map("order_id")
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  byRole    String   @map("by_role") // CUSTOMER | DRIVER (siapa yang menilai)
+  target    String   @default("DRIVER") // yang dinilai: DRIVER | MERCHANT | CUSTOMER
+  stars     Int
+  comment   String?  @db.Text
+  tip       Decimal  @default(0) @db.Decimal(10, 2) // tip customer → driver (dari Saldo KilatGo)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([orderId, byRole, target])
+  @@index([orderId])
+  @@map("ratings")
+}
+
+// Chat customer↔driver per order (HTTP polling; belum socket).
+model Message {
+  id         String    @id @default(uuid())
+  orderId    String    @map("order_id")
+  order      Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  senderRole String    @map("sender_role") // CUSTOMER | DRIVER
+  body       String    @db.Text
+  readAt     DateTime? @map("read_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([orderId])
+  @@map("messages")
+}
+
+model MerchantWithdrawal {
+  id              String    @id @default(uuid())
+  merchantId      String    @map("merchant_id")
+  merchant        Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  amount          Decimal   @db.Decimal(12, 2)
+  bankName        String    @map("bank_name")
+  bankAccount     String    @map("bank_account")
+  bankHolder      String    @map("bank_holder")
+  status          String    @default("PENDING") // PENDING | PROCESSING | COMPLETED | REJECTED
+  rejectionReason String?   @db.Text @map("rejection_reason")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  processedAt     DateTime? @map("processed_at")
+
+  @@index([merchantId])
+  @@map("merchant_withdrawals")
+}
+
+// Promo/kampanye per audiens (customer/driver/mitra), dikelola admin.
+model Promo {
+  id          String   @id @default(uuid())
+  title       String
+  description String?  @db.Text
+  audience    String   // CUSTOMER | DRIVER | MERCHANT
+  placement   String   @default("ALL") // ALL | FOOD | SEND | RIDE | CAR — layar tempat promo tampil
+  image       String?  // banner publik
+  voucherCode String?  @map("voucher_code") // kaitkan ke voucher → banner bisa diklik utk lihat detail/kode
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([audience])
+  @@map("promos")
+}
+
+model OrderItem {
+  id       String  @id @default(uuid())
+  orderId  String  @map("order_id")
+  order    Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  menuId   String? @map("menu_id") // snapshot; menu bisa dihapus/berubah nanti
+  name     String
+  price    Decimal @db.Decimal(10, 2)
+  quantity Int     @default(1)
+  note     String? @db.Text
+
+  @@index([orderId])
+  @@map("order_items")
 }
 
 model Payment {
@@ -425,4 +798,92 @@ model ErrorLog {
 
   @@index([createdAt])
   @@map("error_logs")
+}
+
+// Paket Mitra Driver (opsional): Jacket + Helm SNI. Bayar via iPaymu, dikirim manual (tanpa tracking).
+enum DriverPackageStatus {
+  PENDING_PAYMENT // Verifikasi pembayaran (menunggu bayar)
+  VERIFIED        // Terverifikasi (pembayaran sukses)
+  PROCESSING      // Proses (disiapkan)
+  SHIPPING        // Dalam Perjalanan
+  RECEIVED        // Di terima
+  COMPLETED       // Selesai
+}
+
+model DriverPackageOrder {
+  id              String              @id @default(uuid())
+  driverId        String              @map("driver_id")
+  driver          Driver              @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  amount          Decimal             @db.Decimal(12, 2)
+  status          DriverPackageStatus @default(PENDING_PAYMENT)
+  referenceId     String              @unique @map("reference_id")
+  paymentUrl      String?             @db.Text @map("payment_url")
+  ipaymuSessionId String?             @map("ipaymu_session_id")
+  ipaymuTrxId     String?             @map("ipaymu_trx_id")
+  paidAt          DateTime?           @map("paid_at")
+  adminNote       String?             @map("admin_note")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+
+  @@index([driverId])
+  @@map("driver_package_orders")
+}
+
+// ===== Live Chat Support (Laporan / tiket bantuan) =====
+enum TicketRole {
+  CUSTOMER
+  DRIVER
+  MERCHANT
+}
+
+// OPEN = aktif (ditangani bot / menunggu). IN_PROGRESS = CS sudah menangani. RESOLVED = ditutup.
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum TicketSender {
+  USER
+  BOT
+  ADMIN
+}
+
+model SupportTicket {
+  id            String        @id @default(uuid())
+  userId        String        @map("user_id")
+  role          TicketRole
+  fromName      String?       @map("from_name")
+  category      String?       // key topik (mis. ubah_profil)
+  subject       String
+  status        TicketStatus  @default(OPEN)
+  needsAdmin    Boolean       @default(false) @map("needs_admin") // pengguna minta CS manusia
+  handledByAdmin Boolean      @default(false) @map("handled_by_admin")
+  closedBy      String?       @map("closed_by") // 'user' | 'bot' | 'admin'
+  rating        Int?          // 1-5 setelah ditutup
+  ratingComment String?       @db.Text @map("rating_comment")
+
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  resolvedAt DateTime? @map("resolved_at")
+
+  messages SupportMessage[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("support_tickets")
+}
+
+model SupportMessage {
+  id       String       @id @default(uuid())
+  ticketId String       @map("ticket_id")
+  ticket   SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender   TicketSender
+  body     String       @db.Text
+  readByUser  Boolean   @default(false) @map("read_by_user")
+  readByAdmin Boolean   @default(false) @map("read_by_admin")
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  @@index([ticketId])
+  @@map("support_messages")
 }
