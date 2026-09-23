@@ -1,5 +1,5 @@
 /**
- * Cek pengiriman email (Brevo/Resend/SendGrid):
+ * Cek pengiriman email reset sandi lewat Brevo:
  * (1) MAIL_FROM "Nama <email>" dipecah jadi name+email — Brevo menolak string gabungan,
  * (2) MAIL_FROM tanpa nama tetap valid,
  * (3) body Brevo memakai nama field yang benar (sender/htmlContent/textContent,
@@ -33,8 +33,6 @@ async function main() {
 
   process.env.MAIL_FROM = 'KilatGo <no-reply@kilatgo.com>';
   process.env.BREVO_API_KEY = 'dummy-key';
-  delete process.env.RESEND_API_KEY;
-  delete process.env.SENDGRID_API_KEY;
 
   assert.equal(isMailConfigured(), true, 'dengan kunci Brevo harus dianggap terkonfigurasi');
 

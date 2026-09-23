@@ -200,12 +200,12 @@ mysqldump --defaults-file=$HOME/.kg-my.cnf --single-transaction --routines --tri
 ### Jangan log kredensial di produksi
 ### Email reset sandi (Brevo)
 Endpoint mengirim lewat HTTP API, jadi tidak perlu SMTP dan tidak ada dependency
-npm. Provider yang didukung: **Brevo** (utama), Resend, SendGrid — prioritas
-Brevo → Resend → SendGrid, yang pertama terisi dipakai.
+npm. **Brevo adalah satu-satunya provider** — `npm ci` OOM di shared host ini,
+jadi jalur HTTP/SDK-less adalah syarat mutlak.
 
-**Tanpa kunci yang terisi, email TIDAK terkirim** tapi endpoint tetap membalas
-200 (supaya permintaan pengguna tidak pernah 500). Artinya alur lupa sandi
-terlihat normal padahal tidak ada email apa pun. Cek dengan
+**Tanpa `BREVO_API_KEY` yang terisi, email TIDAK terkirim** tapi endpoint tetap
+membalas 200 (supaya permintaan pengguna tidak pernah 500). Artinya alur lupa
+sandi terlihat normal padahal tidak ada email apa pun. Cek dengan
 `grep '\[MAIL SKIP\]' ~/logs/*.log` atau set kuncinya.
 
 Langkah Brevo:
