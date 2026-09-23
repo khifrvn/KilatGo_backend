@@ -164,6 +164,9 @@ model User {
   role      UserRole
   status    UserStatus @default(PENDING)
   suspendReason String? @db.Text @map("suspend_reason") // alasan blokir (ditampilkan ke pengguna)
+  /// Diperbarui tiap sandi diganti. Token dengan `iat` lebih lama dari ini
+  /// ditolak, sehingga reset sandi mencabut semua sesi lama (token stateless).
+  passwordChangedAt DateTime @default(now()) @map("password_changed_at")
   createdAt DateTime   @default(now()) @map("created_at")
   updatedAt DateTime   @updatedAt @map("updated_at")
 
@@ -172,8 +175,24 @@ model User {
   admin         Admin?
   merchant      Merchant?
   notifications Notification[] @relation("UserNotifications")
+  passwordResets PasswordReset[] @relation("UserPasswordResets")
 
   @@map("users")
+}
+
+/// Token reset sandi sekali pakai. `tokenHash` = SHA-256 token mentah, jadi isi
+/// tabel yang bocor tidak langsung bisa dipakai mengganti sandi orang lain.
+model PasswordReset {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade, name: "UserPasswordResets")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("password_resets")
 }
 
 model Customer {

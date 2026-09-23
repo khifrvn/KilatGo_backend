@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { UserRole, UserStatus } from '@prisma/client';
 import { prisma } from '../config/database';
 import { generateTokens, verifyRefreshToken } from '../utils/jwt';
+import { isTokenRevoked } from '../utils/tokenRevocation';
 import { AppError } from '../middleware/error.middleware';
 import { User } from '@prisma/client';
 import * as settingsService from './settings.service';
@@ -256,6 +257,11 @@ export async function refresh(refreshToken: string): Promise<AuthResponse> {
   }
   if (user.status === UserStatus.SUSPENDED) {
     throw new AppError('Account has been suspended', 403);
+  }
+  // Sama seperti auth.middleware: token yang terbit sebelum sandi terakhir
+  // diganti tidak berlaku.
+  if (isTokenRevoked(user.passwordChangedAt, payload.iat)) {
+    throw new AppError('Sesi berakhir. Silakan masuk kembali.', 401);
   }
 
   return await buildAuthResponse(user);

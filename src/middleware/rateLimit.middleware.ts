@@ -39,3 +39,21 @@ export const ppobStatusLimiter = limiter(
   20,
   'Terlalu sering memeriksa status. Tunggu sebentar ya.'
 );
+
+/// Minta tautan reset & pakai token reset dibatasi per IP (endpoint ini belum
+/// ber-auth). Dua limiter terpisah — kalau digabung, percobaan reset yang gagal
+/// ikut menghabiskan kuota permintaan tautan, sehingga pengguna yang salah ketik
+/// justru terkunci dari meminta tautan baru.
+export const forgotPasswordLimiter = limiter(
+  15 * 60 * 1000,
+  5,
+  'Terlalu banyak permintaan tautan reset. Coba lagi beberapa menit lagi.'
+);
+
+/// Lebih longgar dari permintaan tautan: pengguna wajar mencoba beberapa kali
+/// kalau tokennya kedaluwarsa, tapi tetap dibatasi agar token tidak bisa ditebak.
+export const resetPasswordLimiter = limiter(
+  15 * 60 * 1000,
+  10,
+  'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.'
+);

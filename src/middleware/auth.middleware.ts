@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/jwt';
+import { isTokenRevoked } from '../utils/tokenRevocation';
 import { errorResponse } from '../utils/response';
 import { UserRole, UserStatus } from '@prisma/client';
 import { prisma } from '../config/database';
@@ -33,10 +34,16 @@ export async function authenticateToken(
   try {
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { status: true, suspendReason: true },
+      select: { status: true, suspendReason: true, passwordChangedAt: true },
     });
     if (!user) {
       errorResponse(res, 'Akun tidak ditemukan', 401);
+      return;
+    }
+    // Token yang dibuat sebelum sandi terakhir diganti sudah tidak berlaku
+    // (mis. token curian setelah pengguna mereset sandinya).
+    if (isTokenRevoked(user.passwordChangedAt, decoded.iat)) {
+      errorResponse(res, 'Sesi berakhir. Silakan masuk kembali.', 401);
       return;
     }
     if (user.status === UserStatus.SUSPENDED) {

@@ -29,6 +29,7 @@ import packageRoutes from './routes/package.routes';
 import supportRoutes from './routes/support.routes';
 import customerRoutes from './routes/customer.routes';
 import ppobRoutes from './routes/ppob.routes';
+import passwordResetPageRoutes from './routes/passwordResetPage.routes';
 import { startPaymentExpirySweeper } from './services/payment.service';
 import { startRedispatchSweeper } from './services/dispatch.service';
 import { startStaleOrderSweeper } from './services/order.service';
@@ -99,6 +100,10 @@ app.use('/uploads/promos', express.static(PROMO_UPLOAD_DIR));
 app.use('/uploads/avatars', express.static(AVATAR_UPLOAD_DIR));
 // Musik layar perbaikan — di atas gate maintenance supaya tetap bisa diputar.
 app.use('/uploads/music', express.static(MUSIC_UPLOAD_DIR));
+// Halaman web reset password (tautan di email). WAJIB di atas SPA fallback CMS,
+// kalau tidak /reset-password akan dilayani index.html panel admin.
+app.use(passwordResetPageRoutes);
+
 // SPA fallback: semua GET non-API kembalikan index.html (react-router). Di ATAS gate
 // supaya panel admin tetap bisa dimuat untuk mematikan maintenance mode.
 app.get(/^\/(?!api\/|api$|health$).*/, (_req, res) => res.sendFile(path.join(cmsDist, 'index.html')));

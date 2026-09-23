@@ -1,3 +1,20 @@
 deployment:
   tasks:
-    - 'source /home/kilb7536/nodevenv/repositories/Kilatgo_backend/*/bin/activate && npm ci && npx prisma generate && npx prisma migrate deploy && npx tsc && (cd cms && npm ci && npm run build) && mkdir -p tmp && touch tmp/restart.txt'
+    # PENTING: jangan `npm ci` di sharehost ini — RAM kecil, hasilnya
+    # `Aborted (core dumped)`. `npx tsc` juga jalan di lokal (node di server
+    # OOM saat compile). Jadi build tetap di lokal, upload dist/ + schema.
+    #
+    # `npx prisma generate` WAJIB dijalankan di sini setiap kali schema.prisma
+    # berubah. Tanpa itu Prisma Client lama tetap dipakai dan model baru
+    # (mis. `prisma.passwordReset`) `undefined` -> endpoint balas 500.
+    #
+    # Perubahan skema juga butuh `npx prisma migrate deploy`. Bila proses ini
+    # OOM, terapkan SQL-nya manual lewat mysql CLI dan catat barisnya di
+    # `_prisma_migrations` (checksum = sha256 file migration.sql apa adanya),
+    # supaya migrasi berikutnya tidak mengulang.
+    #
+    # Catatan: `touch tmp/restart.txt` TERBUKTI TIDAK me-respawn Passenger di
+    # paket ini (proses lsnode tetap hidup 1d22j). Pakai `pkill` bila perlu
+    # kode baru benar-benar aktif.
+    - 'source /home/kilb7536/nodevenv/repositories/Kilatgo_backend/*/bin/activate && npx prisma generate && npx prisma migrate deploy && mkdir -p tmp && touch tmp/restart.txt'
+

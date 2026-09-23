@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import * as authService from '../services/auth.service';
+import * as passwordResetService from '../services/passwordReset.service';
 import { successResponse } from '../utils/response';
 
 export async function registerCustomer(
@@ -58,6 +59,33 @@ export async function refresh(
   try {
     const result = await authService.refresh(req.body.refreshToken);
     successResponse(res, 'Token refreshed', result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/// Balasan sengaja sama untuk email terdaftar maupun tidak (anti-enumerasi).
+export async function forgotPassword(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    await passwordResetService.requestPasswordReset(req.body.email);
+    successResponse(res, 'Jika email terdaftar, tautan reset sudah dikirim.');
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function resetPassword(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    await passwordResetService.resetPassword(req.body.token, req.body.password);
+    successResponse(res, 'Password berhasil diubah. Silakan masuk dengan password baru.');
   } catch (error) {
     next(error);
   }

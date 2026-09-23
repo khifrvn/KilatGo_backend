@@ -57,4 +57,15 @@ export const refreshSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });
 
+/// Minta tautan reset. Email selalu disaring format-nya sebelum menyentuh DB.
+export const forgotPasswordSchema = z.object({
+  email: z.string().email('Format email tidak valid'),
+});
+
+/// Pakai password baru. Panjang minimum disamakan dengan registrasi (6).
+export const resetPasswordSchema = z.object({
+  token: z.string().min(32, 'Token reset tidak valid'),
+  password: z.string().min(6, 'Password minimal 6 karakter'),
+});
+
 export const userRoleSchema = z.nativeEnum(UserRole);
