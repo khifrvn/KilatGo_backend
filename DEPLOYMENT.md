@@ -198,6 +198,44 @@ mysqldump --defaults-file=$HOME/.kg-my.cnf --single-transaction --routines --tri
 ```
 
 ### Jangan log kredensial di produksi
+### Email reset sandi (Brevo)
+Endpoint mengirim lewat HTTP API, jadi tidak perlu SMTP dan tidak ada dependency
+npm. Provider yang didukung: **Brevo** (utama), Resend, SendGrid — prioritas
+Brevo → Resend → SendGrid, yang pertama terisi dipakai.
+
+**Tanpa kunci yang terisi, email TIDAK terkirim** tapi endpoint tetap membalas
+200 (supaya permintaan pengguna tidak pernah 500). Artinya alur lupa sandi
+terlihat normal padahal tidak ada email apa pun. Cek dengan
+`grep '\[MAIL SKIP\]' ~/logs/*.log` atau set kuncinya.
+
+Langkah Brevo:
+1. Daftar di brevo.com → **Senders, Domains & Dedicated IPs** → tambahkan
+   `kilatgo.com` sebagai domain.
+2. Tambahkan record DNS yang diberikan Brevo (DKIM + Brevo code; SPF opsional
+   tapi disarankan). Di rumahweb: cPanel → **Zone Editor**, atau di registrar
+   domain kalau NS-nya bukan ke rumahweb. Tanpa ini Brevo menolak pengirim dan
+   email gagal walau API key benar.
+3. Buat API key di **SMTP & API → API Keys**. Salin nilainya (diawali
+   `xkeysib-`).
+4. Isi di `~/repositories/Kilatgo_backend/.env`, lalu restart:
+   ```bash
+   # BREVO_API_KEY=xkeysib-xxxx   → hapus tanda # dan ganti nilainya
+   pkill -f "lsnode:/home/kilb7536/repositories/Kilatgo_backen[d]"
+   ```
+5. Verifikasi: minta tautan reset dari aplikasi, pastikan email masuk. Cek juga
+   **Transactional → Logs** di Brevo; kalau statusnya "blocked"/"invalid sender",
+   DNS belum benar.
+
+Catatan: `MAIL_FROM` di produksi `KilatGo <no-reply@kilatgo.com>` sudah benar
+dan tidak perlu diubah — mailer memisahkannya otomatis ke `sender.name` +
+`sender.email` karena Brevo menolak string gabungan. Kuota gratis Brevo 300
+email/hari, cukup untuk reset sandi. Kunci API **hanya** ditaruh di `.env`
+server; jangan pernah masuk git.
+
+Setelah email aktif, DRY-RUN dulu ke alamat sendiri sebelum diumumkan — reset
+sandi yang gagal kirim akan terlihat seperti "tidak ada email masuk" oleh
+pengguna, bukan seperti error.
+
 Kode yang men-`console.warn` tautan reset (atau token apa pun) berarti
 kredensial hidup tersimpan di log hosting. Batasi pencetakan itu ke
 `NODE_ENV !== 'production'`.

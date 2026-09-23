@@ -1,10 +1,20 @@
-// Kirim email lewat HTTP API provider (Resend / SendGrid) tanpa dependency npm —
-// pola sama seperti utils/fcm.ts: hindari install berat di shared host.
-// Bila belum dikonfigurasi, email tidak dikirim (hanya di-log) supaya alur reset
-// masih bisa diuji manual dan permintaan pengguna tidak pernah gagal 500.
+// Kirim email lewat HTTP API provider (Brevo / Resend / SendGrid) tanpa
+// dependency npm — pola sama seperti utils/fcm.ts: hindari install berat di
+// shared host. Bila belum dikonfigurasi, email tidak dikirim (hanya di-log)
+// supaya alur reset masih bisa diuji manual dan permintaan pengguna tidak
+// pernah gagal 500.
 
+const BREVO_ENDPOINT = 'https://api.brevo.com/v3/smtp/email';
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 const SENDGRID_ENDPOINT = 'https://api.sendgrid.com/v3/mail/send';
+
+/// `MAIL_FROM` ditulis "Nama <email@domain>", tapi Brevo menolak string
+/// gabungan: sender harus { name, email} terpisah. Resend/SendGrid menerima
+/// string apa adanya, jadi hanya Brevo yang perlu dipecah.
+export function parseFrom(from: string): { email: string; name?: string } {
+  const m = from.match(/^\s*(.*?)\s*<\s*([^>]+?)\s*>\s*$/);
+  return m && m[2] ? { name: m[1] || undefined, email: m[2] } : { email: from.trim() };
+}
 
 export interface MailInput {
   to: string;
@@ -14,7 +24,33 @@ export interface MailInput {
 }
 
 export function isMailConfigured(): boolean {
-  return !!(process.env.RESEND_API_KEY || process.env.SENDGRID_API_KEY);
+  return !!(process.env.BREVO_API_KEY || process.env.RESEND_API_KEY || process.env.SENDGRID_API_KEY);
+}
+
+/// Brevo: kunci di header `api-key` (bukan Bearer), body memakai `sender`,
+/// `htmlContent`, `textContent`, dan membalas 201 saat diterima.
+async function sendViaBrevo(apiKey: string, from: string, mail: MailInput): Promise<boolean> {
+  const sender = parseFrom(from);
+  const res = await fetch(BREVO_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'api-key': apiKey,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      sender,
+      to: [{ email: mail.to }],
+      subject: mail.subject,
+      htmlContent: mail.html,
+      textContent: mail.text,
+    }),
+  });
+  if (!res.ok) {
+    console.error('Brevo send failed', res.status, await res.text());
+    return false;
+  }
+  return true;
 }
 
 async function sendViaResend(apiKey: string, from: string, mail: MailInput): Promise<boolean> {
@@ -61,14 +97,16 @@ export async function sendMail(mail: MailInput): Promise<boolean> {
     return false;
   }
 
+  const brevoKey = process.env.BREVO_API_KEY;
   const resendKey = process.env.RESEND_API_KEY;
   const sendgridKey = process.env.SENDGRID_API_KEY;
-  if (!resendKey && !sendgridKey) {
+  if (!brevoKey && !resendKey && !sendgridKey) {
     console.warn(`[MAIL SKIP] ${mail.to} | ${mail.subject}`);
     return false;
   }
 
   try {
+    if (brevoKey) return await sendViaBrevo(brevoKey, from, mail);
     return resendKey
       ? await sendViaResend(resendKey, from, mail)
       : await sendViaSendgrid(sendgridKey as string, from, mail);
