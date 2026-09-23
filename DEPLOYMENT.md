@@ -37,7 +37,10 @@ Baca ini dulu sebelum deploy — banyak jebakan yang sudah kena.
 1. **Push ke GitHub TIDAK auto-deploy.** Remote repo = GitHub, cPanel cuma pull kalau ditrigger manual. `git push` hanya menyimpan kode; tidak menyentuh server.
 2. **Jangan `npm ci` / `npm install` di server.** RAM shared hosting kecil → OOM (`Aborted (core dumped)`). Karena itu **build di lokal**, upload hasil build. Deployment via tombol cPanel "Deploy HEAD Commit" (yang menjalankan `.cpanel.yml` berisi `npm ci`) akan gagal di paket ini.
 3. **`dist/` & `cms/dist/` di-.gitignore** → tidak ikut git. Selalu dikirim manual.
-4. **Restart**: `touch tmp/restart.txt` **bekerja** (proses respawn saat request berikutnya, tanpa downtime). Syaratnya `tmp/` benar-benar ada di app root — kalau tidak, file-nya mendarat di tempat lain dan tidak ada efek apa pun. `pkill -f "lsnode:.../Kilatgo_backend"` juga jalan tapi memutus request yang sedang berjalan.
+4. **Restart**: `touch tmp/restart.txt` **JANGAN DIPERCAYA** — lihat "Koreksi
+   hasil deploy 2026-09-23" di bawah. Terbukti tidak me-respawn Passenger di
+   paket ini (proses `lsnode` tetap hidup 1d22j). Pakai `pkill`. Syarat `tmp/`
+   ada di app root tetap berlaku kalau memang ingin mencoba.
 5. **`scp` sering gagal diam-diam** (auth passphrase via expect, atau path mangling di macOS). Pakai **ssh-agent + kirim file via `ssh stdin`** (lihat di bawah). Kalau file "sudah baru" tapi server serve lama, curiga scp gagal — cek isi file di disk, bukan cuma percaya exit code.
 6. **Bukan cache.** LiteSpeed tidak nge-cache HTML di sini (express kirim `max-age=0`). Kalau server serve versi lama, itu karena **file di disk memang lama**, bukan cache. Tes: curl URL SPA acak (`/zz-123`) — kalau tetap lama, disk lama.
 
@@ -121,6 +124,84 @@ Kalau `prisma generate` OOM, coba lagi (kadang lolos di percobaan kedua).
 | Restart cPanel tak berefek | Passenger tak respawn | `pkill -f "lsnode:...Kilatgo_backend"` |
 | `git checkout -- .` diminta di cPanel Git | working tree server kotor | jangan pakai cPanel git deploy; pakai prosedur di atas |
 | SSH timeout dari rumah | ISP blok port 2223 | pakai VPN |
+
+## Koreksi hasil deploy 2026-09-23 (lupa sandi)
+
+Tiga hal di dokumen ini ternyata **salah atau kurang**, dan ketiganya sempat
+membuat produksi rusak:
+
+1. **`touch tmp/restart.txt` TIDAK me-respawn Passenger di paket ini.**
+   Sudah diuji: `restart.txt` ter-touch, tapi dua proses `lsnode` tetap hidup
+   (`ps -o lstart` = 1d22j, jauh sebelum deploy), dan server tetap melayani kode
+   lama sampai `pkill` dijalankan. Klaim di bagian 4 dan "Restart cPanel tak
+   berefek" di atas **optimistis**. Selalu verifikasi dengan `ps -o etime` setelah
+   restart; kalau `ELAPSED` masih berhari-hari, restart gagal.
+
+   ```bash
+   ssh -i ~/.ssh/kilatgo_deploy -p 2223 kilb7536@tiber.iixcp.rumahweb.net \
+     'pkill -f "lsnode:/home/kilb7536/repositories/Kilatgo_backen[d]"'
+   ```
+   Pakai `[...]` pada pola `pkill`. Tanpa itu, pola cocok dengan perintah `ssh`
+   itu sendiri dan sesi ikut terbunuh di tengah jalan.
+
+2. **`prisma/schema.prisma` adalah artefak deploy, bukan file server.**
+   Mengirim `dist/` + `migration.sql` saja **tidak cukup**. `prisma generate` di
+   server akan membaca skema lama, sehingga model baru (mis.
+   `prisma.passwordReset`) bernilai `undefined` dan endpoint membalas
+   **500 Internal server error**. Kirim `schema.prisma`, lalu generate:
+
+   ```bash
+   ssh ... 'cd ~/repositories/Kilatgo_backend && \
+     export PATH=$HOME/nodevenv/repositories/Kilatgo_backend/22/bin:$PATH && \
+     nohup node node_modules/prisma/build/index.js generate > ~/prisma-gen.log 2>&1 &'
+   ```
+   Jangan pakai `npx prisma generate` di server: sering `Aborted (core dumped)`.
+   Jalankan detached di belakang, lalu poll `~/prisma-gen.log`. Engine-nya sudah
+   ada di `node_modules/@prisma/engines/` jadi tidak perlu unduh.
+   Cek hasilnya: `grep -c passwordReset node_modules/.prisma/client/index.js`.
+
+3. **Migrasi bisa memaksa logout semua orang.** Bila migrasi menambah kolom
+   waktu yang dipakai membandingkan `iat` JWT, `DEFAULT CURRENT_TIMESTAMP(3)`
+   membuat seluruh baris lama berstempel `NOW()` → semua token hidup dianggap
+   terbit sebelum penggantian sandi. Untuk `password_changed_at`, isi baris lama
+   dengan **epoch** (`1970-01-01 00:00:00.000`), baru ubah kolomnya jadi
+   `NOT NULL DEFAULT CURRENT_TIMESTAMP(3)`.
+
+   Karena `prisma generate`/`migrate deploy` sering OOM di sini, migrasi bisa
+   diterapkan langsung dengan `mysql` CLI. **Wajib** mencatat barisnya di
+   `_prisma_migrations` supaya migrasi berikutnya tidak mengulang:
+
+   ```sql
+   INSERT INTO _prisma_migrations
+     (id,checksum,finished_at,migration_name,logs,rolled_back_at,started_at,applied_steps_count)
+   VALUES (UUID(), '<sha256 file migration.sql apa adanya>', NOW(3),
+           '<nama_folder_migrasi>', NULL, NULL, NOW(3), 1);
+   ```
+   `checksum` = `shasum -a 256` atas `migration.sql` **tanpa diubah**.
+
+### Query DB tanpa Node
+`node` OOM untuk skrip sekali pakai. Pakai PHP (tersedia) — dan perhatikan
+`DATABASE_URL` **percent-encoded** serta password bisa mengandung `@`/`:`:
+
+```bash
+php -r '$e=file_get_contents(".env"); preg_match("/^DATABASE_URL=(.*)$/m",$e,$m);
+  $p=parse_url(urldecode(trim($m[1], " \"\x27")));
+  echo ltrim($p["path"],"/")," ",rawurldecode($p["user"]);'
+```
+Untuk `mysqldump`/`mysql`, tulis kredensial ke `~/.kg-my.cnf` (chmod 600) agar
+bash tidak perlu mengurai URL.
+
+### Sebelum deploy: backup
+```bash
+mysqldump --defaults-file=$HOME/.kg-my.cnf --single-transaction --routines --triggers \
+  kilb7536_kilatgo > ~/backup-pre-<nama-perubahan>-$(date +%Y%m%d-%H%M%S).sql
+```
+
+### Jangan log kredensial di produksi
+Kode yang men-`console.warn` tautan reset (atau token apa pun) berarti
+kredensial hidup tersimpan di log hosting. Batasi pencetakan itu ke
+`NODE_ENV !== 'production'`.
+
 
 ## Yang JANGAN dilakukan
 - ❌ Andalkan `git push` untuk deploy (tidak nyambung ke server).
